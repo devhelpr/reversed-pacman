@@ -85,8 +85,10 @@ export function updateHud(els: HudElements, snap: HudSnapshot): void {
   els.time.textContent = formatTime(snap.elapsedSeconds);
   els.score.textContent = String(snap.score);
 
-  if (!snap.allGhostsCaught) {
-    els.objective.textContent = "Chase every ghost before they eat the dots. You cannot eat dots.";
+  if (snap.baitRemaining > 0) {
+    els.objective.textContent = `BAIT ACTIVE — ghosts are hunting you! (${snap.baitRemaining.toFixed(1)}s)`;
+  } else if (!snap.allGhostsCaught) {
+    els.objective.textContent = "Chase ghosts, avoid traps. Blue bait flips the hunt — briefly.";
   } else {
     els.objective.textContent = "All ghosts caught! Reach the glowing exit to finish.";
   }
@@ -94,7 +96,7 @@ export function updateHud(els: HudElements, snap: HudSnapshot): void {
   if (snap.phase === "ready") {
     showOverlay(els, {
       title: "Ready?",
-      body: "Catch the ghosts before they eat every dot, then reach the exit.",
+      body: "Catch the 3 ghosts, then reach the green exit.\nUse the Legenda if a tile looks unfamiliar.",
       cta: "Press ←↑↓→ / WASD or Space to start",
       hint: "P pauses once the round begins",
       variant: "start",
@@ -114,14 +116,41 @@ export function updateHud(els: HudElements, snap: HudSnapshot): void {
       variant: "default",
     });
   } else if (snap.phase === "lost") {
+    const lose = loseCopy(snap.loseReason);
     showOverlay(els, {
-      title: "Dots gone!",
-      body: "The ghosts ate everything.",
+      title: lose.title,
+      body: lose.body,
       hint: "Press R to try again",
       variant: "default",
     });
   } else {
     hideOverlay(els);
+  }
+}
+
+function loseCopy(reason: HudSnapshot["loseReason"]): { title: string; body: string } {
+  switch (reason) {
+    case "ghost":
+      return {
+        title: "Caught!",
+        body: "A hunting ghost got you while bait was active.",
+      };
+    case "trapdoor":
+      return {
+        title: "Trap door!",
+        body: "You fell through an open pit.",
+      };
+    case "shock":
+      return {
+        title: "Zapped!",
+        body: "A live shock plate fried you.",
+      };
+    case "dots":
+    default:
+      return {
+        title: "Dots gone!",
+        body: "The ghosts ate everything.",
+      };
   }
 }
 

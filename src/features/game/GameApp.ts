@@ -4,6 +4,7 @@ import { CanvasRenderer } from "../../core/render/CanvasRenderer";
 import { getFirstLevel, getLevel, type LevelDefinition } from "../levels";
 import { GameSession } from "./GameSession";
 import { createHud, updateHud, type HudElements } from "../hud/Hud";
+import { createLegend } from "../hud/Legend";
 
 export interface GameAppOptions {
   mount: HTMLElement;
@@ -33,8 +34,11 @@ export class GameApp {
           <p class="tagline">You hunt the ghosts. The dots are theirs to steal.</p>
         </div>
         <div class="hud-mount"></div>
-        <div class="canvas-wrap">
-          <canvas id="game-canvas" aria-label="Game maze"></canvas>
+        <div class="play-row">
+          <div class="canvas-wrap">
+            <canvas id="game-canvas" aria-label="Game maze"></canvas>
+          </div>
+          <div class="legend-mount"></div>
         </div>
         <footer class="controls-help">
           <span><kbd>←↑↓→</kbd> / <kbd>WASD</kbd> move</span>
@@ -46,7 +50,9 @@ export class GameApp {
 
     const canvas = this.mount.querySelector("#game-canvas") as HTMLCanvasElement;
     const hudMount = this.mount.querySelector(".hud-mount") as HTMLElement;
+    const legendMount = this.mount.querySelector(".legend-mount") as HTMLElement;
     this.hud = createHud(hudMount);
+    createLegend(legendMount);
     this.renderer = new CanvasRenderer(canvas);
 
     const level = options.levelId ? getLevel(options.levelId) : getFirstLevel();
@@ -76,8 +82,8 @@ export class GameApp {
 
   private fitCanvas = (): void => {
     const wrap = this.mount.querySelector(".canvas-wrap") as HTMLElement;
-    const maxW = Math.min(wrap.clientWidth || window.innerWidth - 32, 900);
-    const maxH = Math.min(window.innerHeight * 0.62, 700);
+    const maxW = Math.min(wrap.clientWidth || window.innerWidth - 32, 720);
+    const maxH = Math.min(window.innerHeight * 0.58, 640);
     this.renderer.resizeForMaze(this.session.maze, maxW, maxH);
   };
 
@@ -100,7 +106,11 @@ export class GameApp {
   };
 
   private render = (): void => {
-    this.renderer.render(this.session.maze, this.session.getActors());
+    this.renderer.render(
+      this.session.maze,
+      this.session.getActors(),
+      this.session.getTrapVisuals(),
+    );
     updateHud(this.hud, this.session.getHud());
   };
 }

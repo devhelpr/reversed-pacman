@@ -12,9 +12,20 @@ export interface GridPos {
   row: number;
 }
 
-export type TileKind = "wall" | "path" | "dot" | "exit" | "empty";
+export type TileKind =
+  | "wall"
+  | "path"
+  | "dot"
+  | "exit"
+  | "bait" // blue bait the player can eat
+  | "trapdoor" // timed pit
+  | "slime" // slows the player
+  | "shock" // timed electric plate
+  | "rift"; // paired teleporter
 
 export type GamePhase = "ready" | "playing" | "won" | "lost" | "paused";
+
+export type LoseReason = "dots" | "ghost" | "trapdoor" | "shock" | null;
 
 export const DIRECTION_VECTORS: Record<Exclude<Direction, "none">, Vec2> = {
   up: { x: 0, y: -1 },

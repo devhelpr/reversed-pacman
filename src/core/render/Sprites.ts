@@ -272,3 +272,287 @@ export function createWallPattern(): HTMLCanvasElement {
   ];
   return bakeSprite(grid);
 }
+
+export function createBaitSprite(frame: number): HTMLCanvasElement {
+  const A = frame % 2 === 0 ? "#4B7BFF" : "#7AA0FF";
+  const B = frame % 2 === 0 ? "#7AA0FF" : "#B8CCFF";
+  const grid: PixelGrid = [
+    [null, null, A, A, null, null, null, null],
+    [null, A, B, B, A, null, null, null],
+    [A, B, B, B, B, A, null, null],
+    [A, B, B, B, B, A, null, null],
+    [null, A, B, B, A, null, null, null],
+    [null, null, A, A, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+  ];
+  return bakeSprite(grid);
+}
+
+export function createTrapdoorSprite(open: boolean): HTMLCanvasElement {
+  if (open) {
+    // Danger pit: loud red/amber hazard rim + purple void (never plain black path)
+    const R = "#FF3B4A";
+    const A = "#FFB020";
+    const V = "#3A1060";
+    const D = "#1A0530";
+    const grid: PixelGrid = [
+      [A, R, A, R, A, R, A, R, A, R, A, R, A, R, A, R],
+      [R, V, V, V, V, V, V, V, V, V, V, V, V, V, V, A],
+      [A, V, D, D, D, D, D, D, D, D, D, D, D, D, V, R],
+      [R, V, D, V, D, D, D, D, D, D, D, D, V, D, V, A],
+      [A, V, D, D, V, D, D, D, D, D, D, V, D, D, V, R],
+      [R, V, D, D, D, V, D, D, D, D, V, D, D, D, V, A],
+      [A, V, D, D, D, D, V, D, D, V, D, D, D, D, V, R],
+      [R, V, D, D, D, D, D, V, V, D, D, D, D, D, V, A],
+      [A, V, D, D, D, D, D, V, V, D, D, D, D, D, V, R],
+      [R, V, D, D, D, D, V, D, D, V, D, D, D, D, V, A],
+      [A, V, D, D, D, V, D, D, D, D, V, D, D, D, V, R],
+      [R, V, D, D, V, D, D, D, D, D, D, V, D, D, V, A],
+      [A, V, D, V, D, D, D, D, D, D, D, D, V, D, V, R],
+      [R, V, D, D, D, D, D, D, D, D, D, D, D, D, V, A],
+      [A, V, V, V, V, V, V, V, V, V, V, V, V, V, V, R],
+      [R, A, R, A, R, A, R, A, R, A, R, A, R, A, R, A],
+    ];
+    return bakeSprite(grid);
+  }
+
+  // Safe hatch: warm amber metal plate with rivets + clear "safe floor" X
+  const L = "#E8C060";
+  const M = "#C49830";
+  const K = "#7A5A18";
+  const grid: PixelGrid = [
+    [K, L, L, L, L, L, L, L, L, L, L, L, L, L, L, K],
+    [L, M, M, M, M, M, M, M, M, M, M, M, M, M, M, L],
+    [L, M, L, M, M, M, M, M, M, M, M, M, M, L, M, L],
+    [L, M, M, K, M, M, M, M, M, M, M, M, K, M, M, L],
+    [L, M, M, M, K, M, M, L, L, M, M, K, M, M, M, L],
+    [L, M, M, M, M, K, M, L, L, M, K, M, M, M, M, L],
+    [L, M, M, M, M, M, K, M, M, K, M, M, M, M, M, L],
+    [L, M, M, M, L, L, M, K, K, M, L, L, M, M, M, L],
+    [L, M, M, M, L, L, M, K, K, M, L, L, M, M, M, L],
+    [L, M, M, M, M, M, K, M, M, K, M, M, M, M, M, L],
+    [L, M, M, M, M, K, M, L, L, M, K, M, M, M, M, L],
+    [L, M, M, M, K, M, M, L, L, M, M, K, M, M, M, L],
+    [L, M, M, K, M, M, M, M, M, M, M, M, K, M, M, L],
+    [L, M, L, M, M, M, M, M, M, M, M, M, M, L, M, L],
+    [L, M, M, M, M, M, M, M, M, M, M, M, M, M, M, L],
+    [K, L, L, L, L, L, L, L, L, L, L, L, L, L, L, K],
+  ];
+  return bakeSprite(grid);
+}
+
+export function createSlimeSprite(frame: number): HTMLCanvasElement {
+  const A = frame % 2 === 0 ? "#3DCF5A" : "#2AAE48";
+  const B = frame % 2 === 0 ? "#7CFF95" : "#3DCF5A";
+  const grid: PixelGrid = [
+    [null, null, A, A, A, A, null, null, null, null, null, null, null, null, null, null],
+    [null, A, B, B, B, B, A, null, null, null, null, null, null, null, null, null],
+    [A, B, B, A, A, B, B, A, null, A, A, null, null, null, null, null],
+    [A, B, A, B, B, A, B, A, A, B, B, A, null, null, null, null],
+    [A, B, A, B, B, A, B, B, B, B, A, B, A, null, null, null],
+    [null, A, B, A, A, B, B, A, A, B, B, B, A, null, null, null],
+    [null, null, A, B, B, B, A, null, null, A, B, A, null, null, null, null],
+    [null, null, null, A, A, A, null, null, null, null, A, null, null, null, null, null],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ],
+  ];
+  return bakeSprite(grid);
+}
+
+export function createShockSprite(live: boolean): HTMLCanvasElement {
+  if (!live) {
+    const G = "#3A3A4A";
+    const grid: PixelGrid = [
+      [G, null, G, null, G, null, G, null],
+      [null, G, null, G, null, G, null, G],
+      [G, null, G, null, G, null, G, null],
+      [null, G, null, G, null, G, null, G],
+      [G, null, G, null, G, null, G, null],
+      [null, G, null, G, null, G, null, G],
+      [G, null, G, null, G, null, G, null],
+      [null, G, null, G, null, G, null, G],
+    ];
+    return bakeSprite(grid);
+  }
+
+  const Y = "#FFE14A";
+  const C = "#7AD4FF";
+  const grid: PixelGrid = [
+    [null, Y, null, C, null, Y, null, C],
+    [Y, C, Y, null, C, Y, C, null],
+    [null, Y, C, Y, null, C, null, Y],
+    [C, null, Y, C, Y, null, Y, C],
+    [null, C, null, Y, C, Y, null, Y],
+    [Y, null, C, null, Y, C, Y, null],
+    [null, Y, null, C, null, Y, C, Y],
+    [C, null, Y, null, C, null, Y, null],
+  ];
+  return bakeSprite(grid);
+}
+
+export function createRiftSprite(frame: number): HTMLCanvasElement {
+  const A = frame % 2 === 0 ? "#B14BFF" : "#7A2AD6";
+  const B = frame % 2 === 0 ? "#E0A0FF" : "#B14BFF";
+  const grid: PixelGrid = [
+    [null, null, A, A, A, A, null, null],
+    [null, A, B, B, B, B, A, null],
+    [A, B, null, B, B, null, B, A],
+    [A, B, B, null, null, B, B, A],
+    [A, B, B, null, null, B, B, A],
+    [A, B, null, B, B, null, B, A],
+    [null, A, B, B, B, B, A, null],
+    [null, null, A, A, A, A, null, null],
+  ];
+  return bakeSprite(grid);
+}
+
+/** Angry hunter look used while bait is active. */
+export const HUNTER_GHOST_PALETTE: GhostPalette = {
+  body: "#E8E8FF",
+  skirt: "#FF4B5C",
+  eyeWhite: "#FF4B5C",
+  pupil: "#1A1A1A",
+};

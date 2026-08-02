@@ -2,8 +2,20 @@ import type { Direction, GridPos, TileKind } from "../types";
 import { DIRECTION_VECTORS } from "../types";
 import type { ParsedMaze } from "./LevelDefinition";
 
+const WALKABLE: ReadonlySet<TileKind> = new Set([
+  "path",
+  "dot",
+  "exit",
+  "bait",
+  "trapdoor",
+  "slime",
+  "shock",
+  "rift",
+]);
+
 /**
- * Mutable tile map for a loaded maze. Ghosts remove dots at runtime.
+ * Mutable tile map for a loaded maze. Ghosts remove dots at runtime;
+ * the player can remove bait tiles.
  */
 export class Maze {
   readonly width: number;
@@ -12,6 +24,9 @@ export class Maze {
   readonly ghostStarts: GridPos[];
   readonly exit: GridPos;
   readonly initialDotCount: number;
+  readonly trapdoorPositions: GridPos[];
+  readonly shockPositions: GridPos[];
+  readonly riftPositions: GridPos[];
 
   private tiles: TileKind[][];
   private dotCount: number;
@@ -23,6 +38,9 @@ export class Maze {
     this.ghostStarts = parsed.ghostStarts.map((g) => ({ ...g }));
     this.exit = { ...parsed.exit };
     this.initialDotCount = parsed.initialDotCount;
+    this.trapdoorPositions = parsed.trapdoorPositions.map((p) => ({ ...p }));
+    this.shockPositions = parsed.shockPositions.map((p) => ({ ...p }));
+    this.riftPositions = parsed.riftPositions.map((p) => ({ ...p }));
     this.tiles = parsed.tiles.map((row) => [...row]);
     this.dotCount = parsed.initialDotCount;
   }
@@ -41,19 +59,29 @@ export class Maze {
   }
 
   isWalkable(col: number, row: number): boolean {
-    const tile = this.getTile(col, row);
-    return tile === "path" || tile === "dot" || tile === "exit";
+    return WALKABLE.has(this.getTile(col, row));
   }
 
   hasDot(col: number, row: number): boolean {
     return this.getTile(col, row) === "dot";
   }
 
-  /** Remove a dot if present. Returns true when a dot was eaten. */
+  hasBait(col: number, row: number): boolean {
+    return this.getTile(col, row) === "bait";
+  }
+
+  /** Remove a scoreable yellow dot if present. */
   eatDot(col: number, row: number): boolean {
     if (!this.hasDot(col, row)) return false;
     this.tiles[row]![col] = "path";
     this.dotCount = Math.max(0, this.dotCount - 1);
+    return true;
+  }
+
+  /** Player eats a blue bait pellet. */
+  eatBait(col: number, row: number): boolean {
+    if (!this.hasBait(col, row)) return false;
+    this.tiles[row]![col] = "path";
     return true;
   }
 
@@ -70,7 +98,15 @@ export class Maze {
     return dirs.filter((d) => this.neighbor(pos, d) !== null);
   }
 
-  /** Clone tiles for rendering without mutation. */
+  /** Next rift destination for a pad the player is standing on. */
+  pairedRift(from: GridPos): GridPos | null {
+    const rifts = this.riftPositions;
+    if (rifts.length < 2) return null;
+    const idx = rifts.findIndex((p) => p.col === from.col && p.row === from.row);
+    if (idx < 0) return null;
+    return { ...rifts[(idx + 1) % rifts.length]! };
+  }
+
   snapshotTiles(): readonly (readonly TileKind[])[] {
     return this.tiles;
   }
