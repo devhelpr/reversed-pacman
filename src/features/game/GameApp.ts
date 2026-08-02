@@ -1,7 +1,13 @@
 import { GameLoop } from "../../core/engine/GameLoop";
 import { InputManager } from "../../core/engine/Input";
 import { CanvasRenderer } from "../../core/render/CanvasRenderer";
-import { getFirstLevel, getLevel, type LevelDefinition } from "../levels";
+import {
+  getFirstLevel,
+  getLevel,
+  isBuiltinLevel,
+  listLevels,
+  type LevelDefinition,
+} from "../levels";
 import { GameSession } from "./GameSession";
 import { createHud, updateHud, type HudElements } from "../hud/Hud";
 import { createLegend } from "../hud/Legend";
@@ -9,6 +15,8 @@ import { createLegend } from "../hud/Legend";
 export interface GameAppOptions {
   mount: HTMLElement;
   levelId?: string;
+  level?: LevelDefinition;
+  onOpenDesigner?: () => void;
 }
 
 /**
@@ -22,16 +30,27 @@ export class GameApp {
   private readonly renderer: CanvasRenderer;
   private readonly hud: HudElements;
   private readonly loop: GameLoop;
+  private readonly onOpenDesigner?: () => void;
   private session: GameSession;
 
   constructor(options: GameAppOptions) {
     this.mount = options.mount;
+    this.onOpenDesigner = options.onOpenDesigner;
 
     this.mount.innerHTML = `
       <div class="game-shell">
-        <div class="game-title">
-          <h1>Reversed Pac-Man</h1>
-          <p class="tagline">You hunt the ghosts. The dots are theirs to steal.</p>
+        <div class="game-title-row">
+          <div class="game-title">
+            <h1>Reversed Pac-Man</h1>
+            <p class="tagline">You hunt the ghosts. The dots are theirs to steal.</p>
+          </div>
+          <div class="game-title-actions">
+            <label class="level-select-wrap">
+              <span>Level</span>
+              <select data-el="level-select" aria-label="Select level"></select>
+            </label>
+            <button type="button" data-el="designer-btn" class="btn">Level Designer</button>
+          </div>
         </div>
         <div class="hud-mount"></div>
         <div class="play-row">
@@ -55,9 +74,18 @@ export class GameApp {
     createLegend(legendMount);
     this.renderer = new CanvasRenderer(canvas);
 
-    const level = options.levelId ? getLevel(options.levelId) : getFirstLevel();
+    const level = options.level ?? (options.levelId ? getLevel(options.levelId) : getFirstLevel());
     this.session = new GameSession(level);
+    this.populateLevelSelect(level.id);
     this.fitCanvas();
+
+    this.mount.querySelector("[data-el='level-select']")!.addEventListener("change", (e) => {
+      const id = (e.target as HTMLSelectElement).value;
+      this.loadLevel(id);
+    });
+    this.mount.querySelector("[data-el='designer-btn']")!.addEventListener("click", () => {
+      this.onOpenDesigner?.();
+    });
 
     this.detachInput = this.input.attach();
     this.loop = new GameLoop(this.update, this.render);
@@ -72,12 +100,31 @@ export class GameApp {
     this.loop.stop();
     this.detachInput();
     window.removeEventListener("resize", this.fitCanvas);
+    this.mount.replaceChildren();
   }
 
   loadLevel(level: LevelDefinition | string): void {
     const def = typeof level === "string" ? getLevel(level) : level;
     this.session = new GameSession(def);
+    this.populateLevelSelect(def.id);
     this.fitCanvas();
+    this.input.clearDirection();
+  }
+
+  refreshLevelList(): void {
+    this.populateLevelSelect(this.session.level.id);
+  }
+
+  private populateLevelSelect(selectedId: string): void {
+    const select = this.mount.querySelector<HTMLSelectElement>("[data-el='level-select']");
+    if (!select) return;
+    const levels = listLevels();
+    select.innerHTML = levels
+      .map((level) => {
+        const tag = isBuiltinLevel(level.id) ? "" : " ★";
+        return `<option value="${level.id}" ${level.id === selectedId ? "selected" : ""}>${escapeHtml(level.name)}${tag}</option>`;
+      })
+      .join("");
   }
 
   private fitCanvas = (): void => {
@@ -89,7 +136,6 @@ export class GameApp {
 
   private update = (dt: number): void => {
     if (this.input.consumeRestart()) {
-      // Restart only matters after a round has begun or ended
       if (this.session.phase !== "ready") {
         this.session.restart();
         this.input.clearDirection();
@@ -113,4 +159,12 @@ export class GameApp {
     );
     updateHud(this.hud, this.session.getHud());
   };
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }

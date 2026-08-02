@@ -48,4 +48,4 @@ export const level1: LevelDefinition = {
   ],
 };
 
-registerLevel(level1);
+registerLevel(level1, { builtin: true });
