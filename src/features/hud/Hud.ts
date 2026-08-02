@@ -96,23 +96,23 @@ export function updateHud(els: HudElements, snap: HudSnapshot): void {
   if (snap.phase === "ready") {
     showOverlay(els, {
       title: "Ready?",
-      body: "Catch the 3 ghosts, then reach the green exit.\nUse the Legenda if a tile looks unfamiliar.",
-      cta: "Press ←↑↓→ / WASD or Space to start",
-      hint: "P pauses once the round begins",
+      body: "Catch the ghosts, then reach the green exit.\nUse the Legenda if a tile looks unfamiliar.",
+      cta: "Tap here · pad · swipe · or keyboard to start",
+      hint: "P / Pause · R / Restart",
       variant: "start",
     });
   } else if (snap.phase === "paused") {
     showOverlay(els, {
       title: "Paused",
       body: "Take a breath — the dots can wait.",
-      hint: "Press P to continue",
+      hint: "Press P or Pause to continue",
       variant: "default",
     });
   } else if (snap.phase === "won") {
     showOverlay(els, {
       title: "You win!",
       body: `Dots + gems + time bonus.\nFinal score: ${snap.score}\n(gems ${snap.bonusScore} · time ${snap.timeBonus})`,
-      hint: "Press R to play again",
+      hint: "Press R or Restart to play again",
       variant: "default",
     });
   } else if (snap.phase === "lost") {
@@ -120,7 +120,7 @@ export function updateHud(els: HudElements, snap: HudSnapshot): void {
     showOverlay(els, {
       title: lose.title,
       body: lose.body,
-      hint: "Press R to try again",
+      hint: "Press R or Restart to try again",
       variant: "default",
     });
   } else {

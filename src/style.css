@@ -282,6 +282,151 @@ body {
   font-size: 0.85rem;
 }
 
+.help-touch {
+  display: none;
+}
+
+.touch-mount {
+  display: none;
+  position: relative;
+  z-index: 30;
+}
+
+.canvas-wrap[data-el="swipe-target"] {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.touch-controls {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  padding: 0.65rem 0.5rem;
+  background: color-mix(in srgb, var(--bg-2) 88%, black);
+  border: 2px solid var(--line);
+}
+
+.touch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.touch-btn,
+.touch-pad {
+  font-family: var(--pixel);
+  font-size: 0.5rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: #12122a;
+  border: 2px solid #4a557a;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.touch-btn:active,
+.touch-pad.active,
+.touch-pad:active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: #1c1c38;
+}
+
+.touch-dpad {
+  display: grid;
+  grid-template-columns: 52px 52px 52px;
+  grid-template-rows: 52px 52px 52px;
+  gap: 4px;
+  justify-self: end;
+}
+
+.touch-pad-up {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.touch-pad-left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.touch-pad-right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.touch-pad-down {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.touch-pad {
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  padding: 0;
+}
+
+.touch-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+@media (pointer: coarse), (max-width: 860px) {
+  .touch-mount {
+    display: block;
+  }
+
+  .help-desktop {
+    display: none;
+  }
+
+  .help-touch {
+    display: inline;
+  }
+
+  .legend-mount {
+    display: none;
+  }
+
+  .play-row {
+    grid-template-columns: 1fr;
+  }
+
+  #app {
+    padding: 0.75rem 0.65rem 1.25rem;
+    align-items: start;
+  }
+
+  .game-shell {
+    width: 100%;
+  }
+
+  .game-title h1 {
+    font-size: 1.25rem;
+  }
+
+  .tagline {
+    font-size: 0.82rem;
+  }
+}
+
+@media (pointer: fine) and (min-width: 861px) {
+  .touch-mount {
+    display: none;
+  }
+}
+
 kbd {
   font-family: var(--pixel);
   font-size: 0.55rem;

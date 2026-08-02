@@ -11,6 +11,7 @@ import {
 import { GameSession } from "./GameSession";
 import { createHud, updateHud, type HudElements } from "../hud/Hud";
 import { createLegend } from "../hud/Legend";
+import { TouchControls } from "../controls/TouchControls";
 
 export interface GameAppOptions {
   mount: HTMLElement;
@@ -27,6 +28,7 @@ export class GameApp {
   private readonly mount: HTMLElement;
   private readonly input = new InputManager();
   private readonly detachInput: () => void;
+  private readonly detachTouch: () => void;
   private readonly renderer: CanvasRenderer;
   private readonly hud: HudElements;
   private readonly loop: GameLoop;
@@ -54,15 +56,17 @@ export class GameApp {
         </div>
         <div class="hud-mount"></div>
         <div class="play-row">
-          <div class="canvas-wrap">
+          <div class="canvas-wrap" data-el="swipe-target">
             <canvas id="game-canvas" aria-label="Game maze"></canvas>
           </div>
           <div class="legend-mount"></div>
         </div>
+        <div data-el="touch-mount" class="touch-mount"></div>
         <footer class="controls-help">
-          <span><kbd>←↑↓→</kbd> / <kbd>WASD</kbd> move</span>
-          <span><kbd>P</kbd> pause</span>
-          <span><kbd>R</kbd> restart</span>
+          <span class="help-desktop"><kbd>←↑↓→</kbd> / <kbd>WASD</kbd> move</span>
+          <span class="help-desktop"><kbd>P</kbd> pause</span>
+          <span class="help-desktop"><kbd>R</kbd> restart</span>
+          <span class="help-touch">Swipe maze or use on-screen pad</span>
         </footer>
       </div>
     `;
@@ -70,6 +74,8 @@ export class GameApp {
     const canvas = this.mount.querySelector("#game-canvas") as HTMLCanvasElement;
     const hudMount = this.mount.querySelector(".hud-mount") as HTMLElement;
     const legendMount = this.mount.querySelector(".legend-mount") as HTMLElement;
+    const touchMount = this.mount.querySelector("[data-el='touch-mount']") as HTMLElement;
+    const swipeTarget = this.mount.querySelector("[data-el='swipe-target']") as HTMLElement;
     this.hud = createHud(hudMount);
     createLegend(legendMount);
     this.renderer = new CanvasRenderer(canvas);
@@ -88,6 +94,9 @@ export class GameApp {
     });
 
     this.detachInput = this.input.attach();
+    const touch = new TouchControls(this.input, touchMount, swipeTarget);
+    this.detachTouch = touch.attach();
+    this.wireOverlayTouch();
     this.loop = new GameLoop(this.update, this.render);
     window.addEventListener("resize", this.fitCanvas);
   }
@@ -99,6 +108,7 @@ export class GameApp {
   destroy(): void {
     this.loop.stop();
     this.detachInput();
+    this.detachTouch();
     window.removeEventListener("resize", this.fitCanvas);
     this.mount.replaceChildren();
   }
@@ -113,6 +123,17 @@ export class GameApp {
 
   refreshLevelList(): void {
     this.populateLevelSelect(this.session.level.id);
+  }
+
+  private wireOverlayTouch(): void {
+    this.hud.overlay.addEventListener("pointerup", (event) => {
+      // Ignore right-clicks; treat overlay tap as primary mobile action
+      if (event.button !== 0 && event.pointerType === "mouse") return;
+      const phase = this.session.phase;
+      if (phase === "ready") this.input.requestStart();
+      else if (phase === "paused") this.input.requestPause();
+      else if (phase === "won" || phase === "lost") this.input.requestRestart();
+    });
   }
 
   private populateLevelSelect(selectedId: string): void {
@@ -130,7 +151,8 @@ export class GameApp {
   private fitCanvas = (): void => {
     const wrap = this.mount.querySelector(".canvas-wrap") as HTMLElement;
     const maxW = Math.min(wrap.clientWidth || window.innerWidth - 32, 720);
-    const maxH = Math.min(window.innerHeight * 0.58, 640);
+    const isNarrow = window.matchMedia("(max-width: 860px), (pointer: coarse)").matches;
+    const maxH = Math.min(window.innerHeight * (isNarrow ? 0.42 : 0.58), isNarrow ? 480 : 640);
     this.renderer.resizeForMaze(this.session.maze, maxW, maxH);
   };
 

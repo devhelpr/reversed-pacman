@@ -16,8 +16,7 @@ const KEY_TO_DIRECTION: Record<string, Direction> = {
 };
 
 /**
- * Tracks pressed keys and exposes the latest movement intent.
- * Extendable for gamepad / touch later.
+ * Tracks keyboard + programmatic (touch) movement intent.
  */
 export class InputManager {
   private pressed = new Set<string>();
@@ -70,6 +69,26 @@ export class InputManager {
       if (dir) return dir;
     }
     return this.lastDirection;
+  }
+
+  /** Touch / on-screen pad: set held direction (and optionally start the round). */
+  setDirection(direction: Direction, alsoStart = true): void {
+    this.lastDirection = direction;
+    if (alsoStart && direction !== "none") {
+      this.startRequested = true;
+    }
+  }
+
+  requestStart(): void {
+    this.startRequested = true;
+  }
+
+  requestRestart(): void {
+    this.restartRequested = true;
+  }
+
+  requestPause(): void {
+    this.pauseRequested = true;
   }
 
   consumeRestart(): boolean {
