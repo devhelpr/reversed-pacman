@@ -44,11 +44,11 @@ export class GameSession {
     this.finalScore = null;
   }
 
-  update(dt: number, desiredDirection: Direction): void {
+  update(dt: number, desiredDirection: Direction, startRequested = false): void {
     if (this.phase === "paused") return;
     if (this.phase !== "playing" && this.phase !== "ready") return;
 
-    if (this.phase === "ready" && desiredDirection !== "none") {
+    if (this.phase === "ready" && (startRequested || desiredDirection !== "none")) {
       this.start();
     }
     if (this.phase !== "playing") return;

@@ -24,6 +24,7 @@ export class InputManager {
   private lastDirection: Direction = "none";
   private restartRequested = false;
   private pauseRequested = false;
+  private startRequested = false;
 
   attach(target: Window = window): () => void {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -32,6 +33,12 @@ export class InputManager {
       const dir = KEY_TO_DIRECTION[event.key];
       if (dir) {
         this.lastDirection = dir;
+        this.startRequested = true;
+        event.preventDefault();
+      }
+
+      if (event.key === " " || event.key === "Enter") {
+        this.startRequested = true;
         event.preventDefault();
       }
 
@@ -74,6 +81,12 @@ export class InputManager {
   consumePause(): boolean {
     if (!this.pauseRequested) return false;
     this.pauseRequested = false;
+    return true;
+  }
+
+  consumeStart(): boolean {
+    if (!this.startRequested) return false;
+    this.startRequested = false;
     return true;
   }
 

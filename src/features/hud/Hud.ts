@@ -17,8 +17,11 @@ export interface HudElements {
   score: HTMLElement;
   objective: HTMLElement;
   overlay: HTMLElement;
+  overlayCard: HTMLElement;
   overlayTitle: HTMLElement;
   overlayBody: HTMLElement;
+  overlayHint: HTMLElement;
+  overlayCta: HTMLElement;
 }
 
 export function createHud(parent: HTMLElement): HudElements {
@@ -47,10 +50,11 @@ export function createHud(parent: HTMLElement): HudElements {
     </header>
     <p data-hud="objective" class="objective"></p>
     <div data-hud="overlay" class="overlay hidden">
-      <div class="overlay-card">
+      <div data-hud="overlay-card" class="overlay-card">
         <h2 data-hud="overlay-title"></h2>
         <p data-hud="overlay-body"></p>
-        <p class="overlay-hint">Press <kbd>R</kbd> to restart · <kbd>P</kbd> pause</p>
+        <p data-hud="overlay-cta" class="overlay-cta hidden"></p>
+        <p data-hud="overlay-hint" class="overlay-hint"></p>
       </div>
     </div>
   `;
@@ -66,8 +70,11 @@ export function createHud(parent: HTMLElement): HudElements {
     score: q('[data-hud="score"]'),
     objective: q('[data-hud="objective"]'),
     overlay: q('[data-hud="overlay"]'),
+    overlayCard: q('[data-hud="overlay-card"]'),
     overlayTitle: q('[data-hud="overlay-title"]'),
     overlayBody: q('[data-hud="overlay-body"]'),
+    overlayHint: q('[data-hud="overlay-hint"]'),
+    overlayCta: q('[data-hud="overlay-cta"]'),
   };
 }
 
@@ -85,32 +92,64 @@ export function updateHud(els: HudElements, snap: HudSnapshot): void {
   }
 
   if (snap.phase === "ready") {
-    showOverlay(
-      els,
-      "Reversed Pac-Man",
-      "Catch the ghosts, save the dots, then reach the exit.\nArrow keys / WASD to move.",
-    );
+    showOverlay(els, {
+      title: "Ready?",
+      body: "Catch the ghosts before they eat every dot, then reach the exit.",
+      cta: "Press ←↑↓→ / WASD or Space to start",
+      hint: "P pauses once the round begins",
+      variant: "start",
+    });
   } else if (snap.phase === "paused") {
-    showOverlay(els, "Paused", "Press P to continue.");
+    showOverlay(els, {
+      title: "Paused",
+      body: "Take a breath — the dots can wait.",
+      hint: "Press P to continue",
+      variant: "default",
+    });
   } else if (snap.phase === "won") {
-    showOverlay(
-      els,
-      "You win!",
-      `Dots left scored + time bonus (under 1 min).\nFinal score: ${snap.score} (bonus ${snap.timeBonus})`,
-    );
+    showOverlay(els, {
+      title: "You win!",
+      body: `Dots left scored + time bonus (under 1 min).\nFinal score: ${snap.score} (bonus ${snap.timeBonus})`,
+      hint: "Press R to play again",
+      variant: "default",
+    });
   } else if (snap.phase === "lost") {
-    showOverlay(els, "Dots gone!", "The ghosts ate everything. Press R to try again.");
+    showOverlay(els, {
+      title: "Dots gone!",
+      body: "The ghosts ate everything.",
+      hint: "Press R to try again",
+      variant: "default",
+    });
   } else {
     hideOverlay(els);
   }
 }
 
-function showOverlay(els: HudElements, title: string, body: string): void {
+interface OverlayContent {
+  title: string;
+  body: string;
+  hint: string;
+  cta?: string;
+  variant: "start" | "default";
+}
+
+function showOverlay(els: HudElements, content: OverlayContent): void {
   els.overlay.classList.remove("hidden");
-  els.overlayTitle.textContent = title;
-  els.overlayBody.textContent = body;
+  els.overlayCard.classList.toggle("overlay-card--start", content.variant === "start");
+  els.overlayTitle.textContent = content.title;
+  els.overlayBody.textContent = content.body;
+  els.overlayHint.textContent = content.hint;
+
+  if (content.cta) {
+    els.overlayCta.textContent = content.cta;
+    els.overlayCta.classList.remove("hidden");
+  } else {
+    els.overlayCta.textContent = "";
+    els.overlayCta.classList.add("hidden");
+  }
 }
 
 function hideOverlay(els: HudElements): void {
   els.overlay.classList.add("hidden");
+  els.overlayCard.classList.remove("overlay-card--start");
 }

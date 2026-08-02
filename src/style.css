@@ -173,6 +173,11 @@ kbd {
   text-align: center;
 }
 
+.overlay-card--start {
+  border-color: var(--accent-2);
+  box-shadow: 6px 6px 0 #062814;
+}
+
 .overlay-card h2 {
   margin: 0 0 0.75rem;
   font-family: var(--display);
@@ -181,16 +186,52 @@ kbd {
   text-transform: uppercase;
 }
 
+.overlay-card--start h2 {
+  color: var(--accent-2);
+}
+
 .overlay-card p {
   margin: 0;
   color: var(--ink);
   white-space: pre-line;
 }
 
+.overlay-cta {
+  margin-top: 1.15rem !important;
+  padding: 0.7rem 0.85rem;
+  font-family: var(--pixel);
+  font-size: 0.62rem;
+  line-height: 1.55;
+  color: var(--bg-0) !important;
+  background: var(--accent);
+  border: 2px solid #fff3;
+  animation: cta-pulse 1.4s ease-in-out infinite;
+}
+
+.overlay-card--start .overlay-cta {
+  background: var(--accent-2);
+}
+
+.overlay-cta.hidden {
+  display: none;
+}
+
 .overlay-hint {
   margin-top: 1rem !important;
   color: var(--muted) !important;
   font-size: 0.85rem;
+}
+
+@keyframes cta-pulse {
+  0%,
+  100% {
+    transform: translateY(0);
+    filter: brightness(1);
+  }
+  50% {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+  }
 }
 
 @media (max-width: 640px) {

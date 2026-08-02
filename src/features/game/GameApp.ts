@@ -83,14 +83,19 @@ export class GameApp {
 
   private update = (dt: number): void => {
     if (this.input.consumeRestart()) {
-      this.session.restart();
-      this.fitCanvas();
+      // Restart only matters after a round has begun or ended
+      if (this.session.phase !== "ready") {
+        this.session.restart();
+        this.input.clearDirection();
+        this.fitCanvas();
+      }
     }
     if (this.input.consumePause()) {
       this.session.togglePause();
     }
 
-    this.session.update(dt, this.input.getDesiredDirection());
+    const startRequested = this.input.consumeStart();
+    this.session.update(dt, this.input.getDesiredDirection(), startRequested);
     this.renderer.advanceAnim(dt);
   };
 
