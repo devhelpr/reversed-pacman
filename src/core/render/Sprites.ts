@@ -566,6 +566,35 @@ export function createBonusSprite(frame: number): HTMLCanvasElement {
   return bakeSprite(grid);
 }
 
+export function createLiftSprite(dir: "up" | "down", frame: number): HTMLCanvasElement {
+  const A = dir === "up" ? "#5CFF8A" : "#FF9E4A";
+  const B = dir === "up" ? "#2AD66A" : "#FF6B2A";
+  const C = frame % 2 === 0 ? A : B;
+  const arrow =
+    dir === "up"
+      ? [
+          [null, null, null, C, C, null, null, null],
+          [null, null, C, C, C, C, null, null],
+          [null, C, C, B, B, C, C, null],
+          [C, C, null, B, B, null, C, C],
+          [null, null, null, B, B, null, null, null],
+          [null, null, null, B, B, null, null, null],
+          [A, A, A, A, A, A, A, A],
+          [A, B, B, B, B, B, B, A],
+        ]
+      : [
+          [A, B, B, B, B, B, B, A],
+          [A, A, A, A, A, A, A, A],
+          [null, null, null, B, B, null, null, null],
+          [null, null, null, B, B, null, null, null],
+          [C, C, null, B, B, null, C, C],
+          [null, C, C, B, B, C, C, null],
+          [null, null, C, C, C, C, null, null],
+          [null, null, null, C, C, null, null, null],
+        ];
+  return bakeSprite(arrow as PixelGrid);
+}
+
 /** Angry hunter look used while bait is active. */
 export const HUNTER_GHOST_PALETTE: GhostPalette = {
   body: "#E8E8FF",

@@ -20,6 +20,8 @@ export const PALETTE: PaletteBrush[] = [
   { char: "~", label: "Slime", color: "#3DCF5A", hint: "Slow floor" },
   { char: "Z", label: "Shock", color: "#FFE14A", hint: "Shock plate" },
   { char: "@", label: "Rift", color: "#B14BFF", hint: "Teleport (pairs)" },
+  { char: "^", label: "Lift ↑", color: "#5CFF8A", hint: "One-way up" },
+  { char: "v", label: "Lift ↓", color: "#FF9E4A", hint: "One-way down" },
 ];
 
 export function brushColor(ch: MazeChar): string {

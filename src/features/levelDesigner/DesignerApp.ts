@@ -1,10 +1,12 @@
 import type { LevelDefinition } from "../levels";
 import { isBuiltinLevel, listLevels, unregisterLevel, upsertLevel } from "../levels";
+import { syncLayoutFromFloors } from "../../core/maze/LevelDefinition";
 import { DesignerCanvas } from "./DesignerCanvas";
 import {
   BUILTIN_LEVEL_IDS,
+  clearCharFromLayout,
   cloneLevel,
-  createBlankLayout,
+  createBlankFloorLayout,
   createEmptyCustomLevel,
   downloadJson,
   parseImportJson,
@@ -32,6 +34,7 @@ export class DesignerApp {
   private painter: DesignerCanvas | null = null;
   private draft: LevelDefinition = createEmptyCustomLevel();
   private dirty = false;
+  private editFloorIndex = 0;
 
   constructor(options: DesignerAppOptions) {
     this.mount = options.mount;
@@ -98,7 +101,18 @@ export class DesignerApp {
             </div>
 
             <div data-el="palette" class="designer-palette"></div>
-            <p class="designer-hint">Left-click paints · right-click paints dots · one P and one E required</p>
+            <div class="designer-floors-bar">
+              <div data-el="floors" class="designer-floors" role="tablist" aria-label="Floors"></div>
+              <div class="designer-floors-actions">
+                <button type="button" data-action="add-floor" class="btn btn-tiny">+ Floor</button>
+                <button type="button" data-action="remove-floor" class="btn btn-tiny">− Floor</button>
+                <label class="field field-floor-name">
+                  <span>Floor name</span>
+                  <input data-el="floor-name" type="text" maxlength="32" />
+                </label>
+              </div>
+            </div>
+            <p class="designer-hint">Left-click paints · right-click paints dots · one P and one E across all floors · lifts (^/v) need a walkable cell on the destination floor</p>
             <div class="designer-canvas-wrap">
               <canvas data-el="canvas" aria-label="Maze editor"></canvas>
             </div>
@@ -138,6 +152,12 @@ export class DesignerApp {
     });
     this.mount.querySelector("[data-action='resize']")!.addEventListener("click", () => {
       this.resizeDraft();
+    });
+    this.mount.querySelector("[data-action='add-floor']")!.addEventListener("click", () => {
+      this.addFloor();
+    });
+    this.mount.querySelector("[data-action='remove-floor']")!.addEventListener("click", () => {
+      this.removeFloor();
     });
 
     this.renderPalette();
@@ -199,8 +219,15 @@ export class DesignerApp {
     this.painter?.destroy();
     this.painter = new DesignerCanvas(canvas);
     this.painter.setBrush("#");
-    this.painter.setLayout(this.draft.layout);
+    this.painter.setLayout(this.currentFloorLayout());
+    this.painter.setUniqueClearer((ch) => {
+      this.ensureFloors();
+      for (const floor of this.draft.floors!) {
+        clearCharFromLayout(floor.layout, ch);
+      }
+    });
     this.painter.setOnChange(() => {
+      this.syncDraftFromFloors();
       this.dirty = true;
       this.setStatus("Unsaved changes");
     });
@@ -210,6 +237,15 @@ export class DesignerApp {
     this.el<HTMLInputElement>("name").addEventListener("input", (e) => {
       this.draft.name = (e.target as HTMLInputElement).value;
       this.dirty = true;
+    });
+
+    this.el<HTMLInputElement>("floor-name").addEventListener("input", (e) => {
+      this.ensureFloors();
+      const floor = this.draft.floors![this.editFloorIndex];
+      if (!floor) return;
+      floor.name = (e.target as HTMLInputElement).value;
+      this.dirty = true;
+      this.renderFloorTabs();
     });
 
     this.mount.querySelectorAll<HTMLInputElement>("[data-param]").forEach((input) => {
@@ -224,7 +260,90 @@ export class DesignerApp {
     });
   }
 
+  private ensureFloors(): void {
+    syncLayoutFromFloors(this.draft);
+    if (this.editFloorIndex >= this.draft.floors!.length) {
+      this.editFloorIndex = Math.max(0, this.draft.floors!.length - 1);
+    }
+  }
+
+  private currentFloorLayout(): string[] {
+    this.ensureFloors();
+    return this.draft.floors![this.editFloorIndex]!.layout;
+  }
+
+  private syncDraftFromFloors(): void {
+    syncLayoutFromFloors(this.draft);
+  }
+
+  private renderFloorTabs(): void {
+    this.ensureFloors();
+    const host = this.el("floors");
+    const floors = this.draft.floors!;
+    host.innerHTML = floors
+      .map(
+        (floor, i) => `
+      <button type="button" class="floor-tab ${i === this.editFloorIndex ? "active" : ""}" data-floor="${i}" role="tab" aria-selected="${i === this.editFloorIndex}">
+        ${i + 1}. ${escapeHtml(floor.name)}
+      </button>`,
+      )
+      .join("");
+
+    host.querySelectorAll<HTMLButtonElement>("[data-floor]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        this.switchFloor(Number(btn.dataset.floor));
+      });
+    });
+
+    const nameInput = this.el<HTMLInputElement>("floor-name");
+    nameInput.value = floors[this.editFloorIndex]?.name ?? "";
+  }
+
+  private switchFloor(index: number): void {
+    this.ensureFloors();
+    if (index < 0 || index >= this.draft.floors!.length) return;
+    this.editFloorIndex = index;
+    this.painter?.setLayout(this.currentFloorLayout());
+    this.renderFloorTabs();
+  }
+
+  private addFloor(): void {
+    this.ensureFloors();
+    const w = this.draft.layout[0]?.length ?? 21;
+    const h = this.draft.layout.length;
+    const n = this.draft.floors!.length;
+    this.draft.floors!.push({
+      id: `floor-${n}`,
+      name: `Floor ${n + 1}`,
+      layout: createBlankFloorLayout(w, h),
+    });
+    this.editFloorIndex = n;
+    this.syncDraftFromFloors();
+    this.dirty = true;
+    this.painter?.setLayout(this.currentFloorLayout());
+    this.renderFloorTabs();
+    this.setStatus(`Added ${this.draft.floors![n]!.name}`);
+  }
+
+  private removeFloor(): void {
+    this.ensureFloors();
+    if (this.draft.floors!.length <= 1) {
+      this.setStatus("Need at least one floor");
+      return;
+    }
+    if (!confirm(`Remove “${this.draft.floors![this.editFloorIndex]!.name}”?`)) return;
+    this.draft.floors!.splice(this.editFloorIndex, 1);
+    this.editFloorIndex = Math.min(this.editFloorIndex, this.draft.floors!.length - 1);
+    this.syncDraftFromFloors();
+    this.dirty = true;
+    this.painter?.setLayout(this.currentFloorLayout());
+    this.renderFloorTabs();
+    this.setStatus("Floor removed");
+  }
+
   private loadDraftIntoForm(): void {
+    this.ensureFloors();
+    this.editFloorIndex = Math.min(this.editFloorIndex, this.draft.floors!.length - 1);
     this.el<HTMLInputElement>("name").value = this.draft.name;
     this.el<HTMLInputElement>("width").value = String(this.draft.layout[0]?.length ?? 21);
     this.el<HTMLInputElement>("height").value = String(this.draft.layout.length);
@@ -233,7 +352,8 @@ export class DesignerApp {
       const value = this.draft[key];
       if (typeof value === "number") input.value = String(value);
     });
-    this.painter?.setLayout(this.draft.layout);
+    this.painter?.setLayout(this.currentFloorLayout());
+    this.renderFloorTabs();
     this.highlightLibrarySelection();
   }
 
@@ -254,7 +374,9 @@ export class DesignerApp {
       <li class="library-item ${this.draft.id === level.id ? "active" : ""}" data-id="${level.id}">
         <button type="button" class="library-open" data-open="${level.id}">
           <strong>${escapeHtml(level.name)}</strong>
-          <span>${kind === "builtin" ? "built-in" : "custom"} · ${level.layout[0]?.length ?? 0}×${level.layout.length}</span>
+          <span>${kind === "builtin" ? "built-in" : "custom"} · ${level.layout[0]?.length ?? 0}×${level.layout.length}${
+            (level.floors?.length ?? 1) > 1 ? ` · ${level.floors!.length} floors` : ""
+          }</span>
         </button>
         <div class="library-item-actions">
           ${
@@ -296,6 +418,7 @@ export class DesignerApp {
   private newLevel(): void {
     if (this.dirty && !confirm("Discard unsaved changes?")) return;
     this.draft = createEmptyCustomLevel(`Custom ${new Date().toLocaleString()}`);
+    this.editFloorIndex = 0;
     this.dirty = true;
     this.loadDraftIntoForm();
     this.setStatus("New draft — save to keep it");
@@ -314,6 +437,7 @@ export class DesignerApp {
         id: `custom-${crypto.randomUUID()}`,
         name: `${builtin.name} (edit)`,
       };
+      this.editFloorIndex = 0;
       this.dirty = true;
       this.loadDraftIntoForm();
       this.setStatus("Editing a copy of a built-in level — save to store it");
@@ -326,6 +450,7 @@ export class DesignerApp {
       return;
     }
     this.draft = cloneLevel(level);
+    this.editFloorIndex = 0;
     this.dirty = false;
     this.loadDraftIntoForm();
     this.setStatus(`Loaded “${level.name}”`);
@@ -343,6 +468,7 @@ export class DesignerApp {
     await levelStore.save(copy);
     upsertLevel(copy);
     this.draft = cloneLevel(copy);
+    this.editFloorIndex = 0;
     this.dirty = false;
     this.loadDraftIntoForm();
     await this.refreshLibrary();
@@ -370,32 +496,51 @@ export class DesignerApp {
   private resizeDraft(): void {
     const width = Number(this.el<HTMLInputElement>("width").value);
     const height = Number(this.el<HTMLInputElement>("height").value);
-    const next = createBlankLayout(width, height);
-    // Preserve overlapping cells where possible
-    const old = this.draft.layout;
-    for (let row = 0; row < next.length; row++) {
-      for (let col = 0; col < (next[0]?.length ?? 0); col++) {
-        const prev = old[row]?.[col];
-        if (
-          prev &&
-          prev !== "#" &&
-          row > 0 &&
-          row < next.length - 1 &&
-          col > 0 &&
-          col < next[0]!.length - 1
-        ) {
-          next[row] = next[row]!.slice(0, col) + prev + next[row]!.slice(col + 1);
+    this.ensureFloors();
+
+    this.draft.floors = this.draft.floors!.map((floor, floorIndex) => {
+      const next = createBlankFloorLayout(width, height);
+      const old = floor.layout;
+      for (let row = 0; row < next.length; row++) {
+        for (let col = 0; col < (next[0]?.length ?? 0); col++) {
+          const prev = old[row]?.[col];
+          if (
+            prev &&
+            prev !== "#" &&
+            row > 0 &&
+            row < next.length - 1 &&
+            col > 0 &&
+            col < next[0]!.length - 1
+          ) {
+            next[row] = next[row]!.slice(0, col) + prev + next[row]!.slice(col + 1);
+          }
         }
       }
-    }
-    this.draft.layout = next;
+      // Keep P/E/G on first floor if they were wiped by a tiny resize edge case
+      if (floorIndex === 0 && !next.some((r) => r.includes("P"))) {
+        const mid = Math.floor((next[0]?.length ?? 2) / 2);
+        const spawnRow = Math.max(1, next.length - 3);
+        if (next[spawnRow]) {
+          next[spawnRow] = next[spawnRow]!.slice(0, mid) + "P" + next[spawnRow]!.slice(mid + 1);
+        }
+      }
+      return { ...floor, layout: next };
+    });
+
+    this.syncDraftFromFloors();
     this.dirty = true;
-    this.painter?.setLayout(this.draft.layout);
-    this.setStatus(`Resized to ${next[0]?.length ?? 0}×${next.length}`);
+    this.painter?.setLayout(this.currentFloorLayout());
+    this.renderFloorTabs();
+    this.setStatus(`Resized to ${this.draft.layout[0]?.length ?? 0}×${this.draft.layout.length}`);
   }
 
   private syncDraftFromForm(): void {
     this.draft.name = this.el<HTMLInputElement>("name").value.trim() || "Untitled";
+    this.ensureFloors();
+    const floor = this.draft.floors![this.editFloorIndex];
+    if (floor) {
+      floor.name = this.el<HTMLInputElement>("floor-name").value.trim() || floor.name;
+    }
     this.mount.querySelectorAll<HTMLInputElement>("[data-param]").forEach((input) => {
       const key = input.dataset.param as keyof LevelDefinition;
       const value = Number(input.value);
@@ -403,6 +548,7 @@ export class DesignerApp {
         (this.draft as unknown as Record<string, unknown>)[key] = value;
       }
     });
+    this.syncDraftFromFloors();
   }
 
   private async saveDraft(): Promise<void> {

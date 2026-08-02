@@ -1,14 +1,14 @@
-import type { LevelDefinition, MazeChar } from "../../core/maze/LevelDefinition";
-import { parseMaze } from "../../core/maze/LevelDefinition";
+import type { FloorDefinition, LevelDefinition, MazeChar } from "../../core/maze/LevelDefinition";
+import { normalizeFloors, parseLevel, syncLayoutFromFloors } from "../../core/maze/LevelDefinition";
 
 export const LEVEL_JSON_FORMAT = "reversed-pacman-level";
 export const LEVELS_JSON_FORMAT = "reversed-pacman-levels";
 export const LEVEL_JSON_VERSION = 1;
 
-export const BUILTIN_LEVEL_IDS = new Set(["level-1"]);
+export const BUILTIN_LEVEL_IDS = new Set(["level-1", "level-2"]);
 
 /** Default gameplay knobs for newly created custom levels. */
-export function defaultLevelParams(): Omit<LevelDefinition, "id" | "name" | "layout"> {
+export function defaultLevelParams(): Omit<LevelDefinition, "id" | "name" | "layout" | "floors"> {
   return {
     timeBonusLimitSeconds: 90,
     pointsPerDot: 10,
@@ -29,7 +29,8 @@ export function defaultLevelParams(): Omit<LevelDefinition, "id" | "name" | "lay
   };
 }
 
-export function createBlankLayout(width: number, height: number): string[] {
+/** Bordered maze filled with dots — no spawns (for extra floors). */
+export function createBlankFloorLayout(width: number, height: number): string[] {
   const w = Math.max(5, Math.min(40, Math.floor(width)));
   const h = Math.max(5, Math.min(40, Math.floor(height)));
   const rows: string[] = [];
@@ -41,6 +42,13 @@ export function createBlankLayout(width: number, height: number): string[] {
     const cells = Array.from({ length: w }, (_, col) => (col === 0 || col === w - 1 ? "#" : "."));
     rows.push(cells.join(""));
   }
+  return rows;
+}
+
+export function createBlankLayout(width: number, height: number): string[] {
+  const rows = createBlankFloorLayout(width, height);
+  const w = rows[0]!.length;
+  const h = rows.length;
 
   // Place defaults near bottom-center
   const mid = Math.floor(w / 2);
@@ -51,11 +59,23 @@ export function createBlankLayout(width: number, height: number): string[] {
   return rows;
 }
 
+export function clearCharFromLayout(layout: string[], ch: MazeChar): void {
+  for (let row = 0; row < layout.length; row++) {
+    for (let col = 0; col < (layout[row]?.length ?? 0); col++) {
+      if (getCell(layout, col, row) === ch) {
+        setCell(layout, col, row, ".");
+      }
+    }
+  }
+}
+
 export function createEmptyCustomLevel(name = "Custom Level"): LevelDefinition {
+  const layout = createBlankLayout(21, 21);
   return {
     id: `custom-${crypto.randomUUID()}`,
     name,
-    layout: createBlankLayout(21, 21),
+    layout,
+    floors: [{ id: "floor-0", name: "Floor 1", layout: [...layout] }],
     ...defaultLevelParams(),
   };
 }
@@ -74,7 +94,7 @@ export function getCell(layout: string[], col: number, row: number): MazeChar {
 export function validateLevel(level: LevelDefinition): string[] {
   const errors: string[] = [];
   try {
-    parseMaze(level.layout);
+    parseLevel(level);
   } catch (err) {
     errors.push(err instanceof Error ? err.message : String(err));
   }
@@ -90,9 +110,14 @@ export function validateLevel(level: LevelDefinition): string[] {
 }
 
 export function cloneLevel(level: LevelDefinition): LevelDefinition {
+  const floors = normalizeFloors(level).map((f) => ({
+    ...f,
+    layout: [...f.layout],
+  }));
   return {
     ...level,
-    layout: [...level.layout],
+    layout: [...floors[0]!.layout],
+    floors,
   };
 }
 
@@ -161,17 +186,30 @@ function coerceLevel(value: unknown, label: string): LevelDefinition {
   if (typeof v.name !== "string") {
     throw new Error(`${label}.name must be a string`);
   }
-  if (!Array.isArray(v.layout) || v.layout.length === 0) {
-    throw new Error(`${label}.layout must be a non-empty string array`);
+
+  let floors: FloorDefinition[] | undefined;
+  if (Array.isArray(v.floors) && v.floors.length > 0) {
+    floors = v.floors.map((raw, i) => coerceFloor(raw, `${label}.floors[${i}]`, i));
   }
-  if (!v.layout.every((row) => typeof row === "string")) {
-    throw new Error(`${label}.layout rows must be strings`);
+
+  let layout: string[];
+  if (floors) {
+    layout = [...floors[0]!.layout];
+  } else if (
+    Array.isArray(v.layout) &&
+    v.layout.length > 0 &&
+    v.layout.every((row) => typeof row === "string")
+  ) {
+    layout = v.layout as string[];
+  } else {
+    throw new Error(`${label} needs layout or floors`);
   }
 
   const level: LevelDefinition = {
     id: v.id.trim(),
     name: v.name,
-    layout: v.layout as string[],
+    layout,
+    floors,
     timeBonusLimitSeconds: num(v.timeBonusLimitSeconds, defaults.timeBonusLimitSeconds),
     pointsPerDot: num(v.pointsPerDot, defaults.pointsPerDot),
     pointsPerBonus: num(v.pointsPerBonus, defaults.pointsPerBonus),
@@ -193,11 +231,32 @@ function coerceLevel(value: unknown, label: string): LevelDefinition {
     slimeSpeedFactor: num(v.slimeSpeedFactor, defaults.slimeSpeedFactor),
   };
 
+  syncLayoutFromFloors(level);
+
   const errors = validateLevel(level);
   if (errors.length > 0) {
     throw new Error(`${label}: ${errors.join("; ")}`);
   }
   return level;
+}
+
+function coerceFloor(value: unknown, label: string, index: number): FloorDefinition {
+  if (!value || typeof value !== "object") {
+    throw new Error(`${label} is not an object`);
+  }
+  const v = value as Record<string, unknown>;
+  if (
+    !Array.isArray(v.layout) ||
+    v.layout.length === 0 ||
+    !v.layout.every((r) => typeof r === "string")
+  ) {
+    throw new Error(`${label}.layout must be a non-empty string array`);
+  }
+  return {
+    id: typeof v.id === "string" && v.id.trim() ? v.id.trim() : `floor-${index}`,
+    name: typeof v.name === "string" && v.name.trim() ? v.name : `Floor ${index + 1}`,
+    layout: v.layout as string[],
+  };
 }
 
 function num(value: unknown, fallback: number): number {

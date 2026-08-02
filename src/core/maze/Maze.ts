@@ -1,6 +1,6 @@
 import type { Direction, GridPos, TileKind } from "../types";
 import { DIRECTION_VECTORS } from "../types";
-import type { ParsedMaze } from "./LevelDefinition";
+import type { FloorPos, ParsedFloor, ParsedLevel } from "./LevelDefinition";
 
 const WALKABLE: ReadonlySet<TileKind> = new Set([
   "path",
@@ -12,114 +12,159 @@ const WALKABLE: ReadonlySet<TileKind> = new Set([
   "shock",
   "rift",
   "bonus",
+  "liftUp",
+  "liftDown",
 ]);
 
+interface FloorRuntime {
+  readonly meta: ParsedFloor;
+  tiles: TileKind[][];
+  dotCount: number;
+}
+
 /**
- * Mutable tile map for a loaded maze. Ghosts remove dots at runtime;
- * the player can remove bait tiles.
+ * Multi-floor mutable tile map. Dots / bait / bonuses are per-floor;
+ * lifts move the player between floors at the same column/row.
  */
 export class Maze {
   readonly width: number;
   readonly height: number;
-  readonly playerStart: GridPos;
-  readonly ghostStarts: GridPos[];
-  readonly exit: GridPos;
+  readonly floorCount: number;
+  readonly playerStart: FloorPos;
+  readonly ghostStarts: FloorPos[];
+  readonly exit: FloorPos;
   readonly initialDotCount: number;
-  readonly trapdoorPositions: GridPos[];
-  readonly shockPositions: GridPos[];
-  readonly riftPositions: GridPos[];
+  readonly floorNames: string[];
 
-  private tiles: TileKind[][];
-  private dotCount: number;
+  private readonly floors: FloorRuntime[];
 
-  constructor(parsed: ParsedMaze) {
-    this.width = parsed.width;
-    this.height = parsed.height;
+  constructor(parsed: ParsedLevel) {
+    this.width = parsed.floors[0]!.width;
+    this.height = parsed.floors[0]!.height;
+    this.floorCount = parsed.floors.length;
     this.playerStart = { ...parsed.playerStart };
     this.ghostStarts = parsed.ghostStarts.map((g) => ({ ...g }));
     this.exit = { ...parsed.exit };
     this.initialDotCount = parsed.initialDotCount;
-    this.trapdoorPositions = parsed.trapdoorPositions.map((p) => ({ ...p }));
-    this.shockPositions = parsed.shockPositions.map((p) => ({ ...p }));
-    this.riftPositions = parsed.riftPositions.map((p) => ({ ...p }));
-    this.tiles = parsed.tiles.map((row) => [...row]);
-    this.dotCount = parsed.initialDotCount;
+    this.floorNames = parsed.floors.map((f) => f.name);
+    this.floors = parsed.floors.map((floor) => ({
+      meta: floor,
+      tiles: floor.tiles.map((row) => [...row]),
+      dotCount: floor.initialDotCount,
+    }));
+  }
+
+  getFloorName(floor: number): string {
+    return this.floorNames[floor] ?? `Floor ${floor + 1}`;
   }
 
   getDotsRemaining(): number {
-    return this.dotCount;
+    return this.floors.reduce((sum, f) => sum + f.dotCount, 0);
   }
 
-  getTile(col: number, row: number): TileKind {
-    if (!this.inBounds(col, row)) return "wall";
-    return this.tiles[row]![col]!;
+  getTile(floor: number, col: number, row: number): TileKind {
+    if (!this.inBounds(floor, col, row)) return "wall";
+    return this.floors[floor]!.tiles[row]![col]!;
   }
 
-  inBounds(col: number, row: number): boolean {
-    return col >= 0 && col < this.width && row >= 0 && row < this.height;
+  inBounds(floor: number, col: number, row: number): boolean {
+    return (
+      floor >= 0 &&
+      floor < this.floorCount &&
+      col >= 0 &&
+      col < this.width &&
+      row >= 0 &&
+      row < this.height
+    );
   }
 
-  isWalkable(col: number, row: number): boolean {
-    return WALKABLE.has(this.getTile(col, row));
+  isWalkable(floor: number, col: number, row: number): boolean {
+    return WALKABLE.has(this.getTile(floor, col, row));
   }
 
-  hasDot(col: number, row: number): boolean {
-    return this.getTile(col, row) === "dot";
+  hasDot(floor: number, col: number, row: number): boolean {
+    return this.getTile(floor, col, row) === "dot";
   }
 
-  hasBait(col: number, row: number): boolean {
-    return this.getTile(col, row) === "bait";
+  hasBait(floor: number, col: number, row: number): boolean {
+    return this.getTile(floor, col, row) === "bait";
   }
 
-  hasBonus(col: number, row: number): boolean {
-    return this.getTile(col, row) === "bonus";
+  hasBonus(floor: number, col: number, row: number): boolean {
+    return this.getTile(floor, col, row) === "bonus";
   }
 
-  /** Remove a scoreable yellow dot if present. */
-  eatDot(col: number, row: number): boolean {
-    if (!this.hasDot(col, row)) return false;
-    this.tiles[row]![col] = "path";
-    this.dotCount = Math.max(0, this.dotCount - 1);
+  eatDot(floor: number, col: number, row: number): boolean {
+    if (!this.hasDot(floor, col, row)) return false;
+    this.floors[floor]!.tiles[row]![col] = "path";
+    this.floors[floor]!.dotCount = Math.max(0, this.floors[floor]!.dotCount - 1);
     return true;
   }
 
-  /** Player eats a blue bait pellet. */
-  eatBait(col: number, row: number): boolean {
-    if (!this.hasBait(col, row)) return false;
-    this.tiles[row]![col] = "path";
+  eatBait(floor: number, col: number, row: number): boolean {
+    if (!this.hasBait(floor, col, row)) return false;
+    this.floors[floor]!.tiles[row]![col] = "path";
     return true;
   }
 
-  /** Player collects a bonus gem. */
-  eatBonus(col: number, row: number): boolean {
-    if (!this.hasBonus(col, row)) return false;
-    this.tiles[row]![col] = "path";
+  eatBonus(floor: number, col: number, row: number): boolean {
+    if (!this.hasBonus(floor, col, row)) return false;
+    this.floors[floor]!.tiles[row]![col] = "path";
     return true;
   }
 
-  neighbor(pos: GridPos, direction: Direction): GridPos | null {
+  neighbor(floor: number, pos: GridPos, direction: Direction): GridPos | null {
     if (direction === "none") return null;
     const v = DIRECTION_VECTORS[direction];
     const next = { col: pos.col + v.x, row: pos.row + v.y };
-    if (!this.isWalkable(next.col, next.row)) return null;
+    if (!this.isWalkable(floor, next.col, next.row)) return null;
     return next;
   }
 
-  walkableDirections(pos: GridPos): Direction[] {
+  walkableDirections(floor: number, pos: GridPos): Direction[] {
     const dirs: Direction[] = ["up", "down", "left", "right"];
-    return dirs.filter((d) => this.neighbor(pos, d) !== null);
+    return dirs.filter((d) => this.neighbor(floor, pos, d) !== null);
   }
 
-  /** Next rift destination for a pad the player is standing on. */
-  pairedRift(from: GridPos): GridPos | null {
-    const rifts = this.riftPositions;
+  pairedRift(floor: number, from: GridPos): GridPos | null {
+    const rifts = this.floors[floor]?.meta.riftPositions ?? [];
     if (rifts.length < 2) return null;
     const idx = rifts.findIndex((p) => p.col === from.col && p.row === from.row);
     if (idx < 0) return null;
     return { ...rifts[(idx + 1) % rifts.length]! };
   }
 
-  snapshotTiles(): readonly (readonly TileKind[])[] {
-    return this.tiles;
+  /** Resolve one-way lift destination, or null if not on a lift / blocked. */
+  liftDestination(floor: number, col: number, row: number): FloorPos | null {
+    const tile = this.getTile(floor, col, row);
+    if (tile === "liftUp") {
+      const dest = floor + 1;
+      if (!this.isWalkable(dest, col, row)) return null;
+      return { floor: dest, col, row };
+    }
+    if (tile === "liftDown") {
+      const dest = floor - 1;
+      if (!this.isWalkable(dest, col, row)) return null;
+      return { floor: dest, col, row };
+    }
+    return null;
+  }
+
+  trapdoorPositions(floor: number): GridPos[] {
+    return this.floors[floor]?.meta.trapdoorPositions.map((p) => ({ ...p })) ?? [];
+  }
+
+  allTrapdoorPositions(): FloorPos[] {
+    const out: FloorPos[] = [];
+    for (let f = 0; f < this.floorCount; f++) {
+      for (const p of this.trapdoorPositions(f)) {
+        out.push({ floor: f, ...p });
+      }
+    }
+    return out;
+  }
+
+  snapshotTiles(floor: number): readonly (readonly TileKind[])[] {
+    return this.floors[floor]?.tiles ?? [];
   }
 }

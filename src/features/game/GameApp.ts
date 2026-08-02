@@ -178,6 +178,7 @@ export class GameApp {
       this.session.maze,
       this.session.getActors(),
       this.session.getTrapVisuals(),
+      this.session.getViewFloor(),
     );
     updateHud(this.hud, this.session.getHud());
   };

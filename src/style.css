@@ -166,6 +166,16 @@ body {
   box-shadow: inset 0 0 0 2px #3a1060;
 }
 
+.swatch-lift-up {
+  background: linear-gradient(180deg, #5cff8a 40%, #2ad66a 41%);
+  clip-path: polygon(50% 0, 100% 45%, 65% 45%, 65% 100%, 35% 100%, 35% 45%, 0 45%);
+}
+
+.swatch-lift-down {
+  background: linear-gradient(0deg, #ff9e4a 40%, #ff6b2a 41%);
+  clip-path: polygon(35% 0, 65% 0, 65% 55%, 100% 55%, 50% 100%, 0 55%, 35% 55%);
+}
+
 .swatch-bonus {
   background: linear-gradient(135deg, #fff6c8 20%, #ffd24a 45%, #ff9e1a 70%);
   clip-path: polygon(50% 0%, 65% 35%, 100% 50%, 65% 65%, 50% 100%, 35% 65%, 0% 50%, 35% 35%);
@@ -717,6 +727,47 @@ kbd {
   flex-wrap: wrap;
   gap: 0.35rem;
   margin-bottom: 0.45rem;
+}
+
+.designer-floors-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.85rem;
+  align-items: end;
+  margin-bottom: 0.45rem;
+}
+
+.designer-floors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.floor-tab {
+  font-family: var(--pixel);
+  font-size: 0.45rem;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: #12122a;
+  border: 2px solid #2a2a48;
+  padding: 0.4rem 0.55rem;
+  cursor: pointer;
+}
+
+.floor-tab.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.designer-floors-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: end;
+}
+
+.field-floor-name {
+  min-width: 8rem;
 }
 
 .palette-btn {

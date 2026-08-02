@@ -1,6 +1,6 @@
 import type { Direction, GamePhase, LoseReason } from "../../core/types";
 import type { LevelDefinition } from "../levels";
-import { parseMaze } from "../../core/maze/LevelDefinition";
+import { parseLevel } from "../../core/maze/LevelDefinition";
 import { Maze } from "../../core/maze/Maze";
 import { computeScore, type ScoreBreakdown } from "../../core/scoring/Score";
 import { Player } from "../player/Player";
@@ -26,9 +26,9 @@ export class GameSession {
 
   constructor(level: LevelDefinition) {
     this.level = level;
-    const parsed = parseMaze(level.layout);
+    const parsed = parseLevel(level);
     this.maze = new Maze(parsed);
-    this.traps = new TrapSystem(level, parsed.trapdoorPositions);
+    this.traps = new TrapSystem(level, this.maze.allTrapdoorPositions());
     this.player = new Player(parsed.playerStart, level.playerSpeed);
     this.ghosts = parsed.ghostStarts.map(
       (start, i) => new Ghost(start, level.ghostSpeed, i, level.ghostEatIntervalSeconds),
@@ -44,13 +44,13 @@ export class GameSession {
   }
 
   restart(): void {
-    const parsed = parseMaze(this.level.layout);
+    const parsed = parseLevel(this.level);
     this.maze = new Maze(parsed);
     this.player = new Player(parsed.playerStart, this.level.playerSpeed);
     this.ghosts = parsed.ghostStarts.map(
       (start, i) => new Ghost(start, this.level.ghostSpeed, i, this.level.ghostEatIntervalSeconds),
     );
-    this.traps = new TrapSystem(this.level, parsed.trapdoorPositions);
+    this.traps = new TrapSystem(this.level, this.maze.allTrapdoorPositions());
     this.phase = "ready";
     this.elapsedSeconds = 0;
     this.bonusCollected = 0;
@@ -70,7 +70,6 @@ export class GameSession {
     this.elapsedSeconds += dt;
     this.traps.tick(dt);
 
-    // Fall animation plays out before the lose screen
     if (this.player.isFalling) {
       this.player.tick(dt, this.maze);
       if (!this.player.alive) {
@@ -83,9 +82,11 @@ export class GameSession {
     const arrived = this.player.tick(dt, this.maze);
 
     const hazard = this.traps.resolvePlayerTile(this.player, this.maze, arrived);
-    if (this.maze.eatBonus(this.player.col, this.player.row)) {
+    if (this.maze.eatBonus(this.player.floor, this.player.col, this.player.row)) {
       this.bonusCollected += 1;
     }
+    this.player.tryLift(this.maze, arrived);
+
     if (hazard === "trapdoor") {
       this.player.beginFall(this.level.trapdoorFallDurationSeconds);
       return;
@@ -95,7 +96,9 @@ export class GameSession {
       return;
     }
 
-    const huntTarget = this.player.isHunted ? this.player.gridPos : null;
+    const huntTarget = this.player.isHunted
+      ? { floor: this.player.floor, col: this.player.col, row: this.player.row }
+      : null;
 
     for (const ghost of this.ghosts) {
       ghost.tick(dt, this.maze, huntTarget, this.level.huntSpeedMultiplier);
@@ -116,6 +119,7 @@ export class GameSession {
     const ghostsLeft = this.ghosts.filter((g) => g.alive).length;
     if (ghostsLeft === 0) {
       const atExit =
+        this.player.floor === this.maze.exit.floor &&
         this.player.col === this.maze.exit.col &&
         this.player.row === this.maze.exit.row &&
         this.player.progress < 0.15;
@@ -133,10 +137,15 @@ export class GameSession {
   }
 
   getTrapVisuals(): TrapVisualState {
-    return this.traps.getVisualState();
+    return this.traps.getVisualState(this.player.floor);
+  }
+
+  getViewFloor(): number {
+    return this.player.floor;
   }
 
   getActors(): RenderableActor[] {
+    const viewFloor = this.player.floor;
     const hunted = this.player.isHunted;
     const falling = this.player.isFalling;
     const actors: RenderableActor[] = [
@@ -152,6 +161,7 @@ export class GameSession {
     ];
 
     for (const ghost of this.ghosts) {
+      if (ghost.floor !== viewFloor) continue;
       actors.push({
         kind: "ghost",
         ghostIndex: ghost.index,
@@ -183,6 +193,9 @@ export class GameSession {
       allGhostsCaught: ghostsRemaining === 0,
       baitRemaining: this.player.baitRemaining,
       loseReason: this.loseReason,
+      floorName: this.maze.getFloorName(this.player.floor),
+      floorIndex: this.player.floor,
+      floorCount: this.maze.floorCount,
     };
   }
 

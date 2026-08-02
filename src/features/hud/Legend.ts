@@ -60,7 +60,19 @@ export const LEGEND_ITEMS: LegendItem[] = [
     id: "rift",
     swatchClass: "swatch-rift",
     label: "Rift",
-    detail: "Teleports you to the paired rift",
+    detail: "Teleports you to the paired rift (same floor)",
+  },
+  {
+    id: "lift-up",
+    swatchClass: "swatch-lift-up",
+    label: "Lift up",
+    detail: "One-way lift to the floor above (same cell)",
+  },
+  {
+    id: "lift-down",
+    swatchClass: "swatch-lift-down",
+    label: "Lift down",
+    detail: "One-way lift to the floor below (same cell)",
   },
   {
     id: "exit",

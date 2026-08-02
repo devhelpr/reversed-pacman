@@ -14,6 +14,8 @@ export class DesignerCanvas {
   private brush: MazeChar = "#";
   private painting = false;
   private onChange: (() => void) | null = null;
+  /** When set, clears unique chars (P/E) across all floors before paint. */
+  private uniqueClearer: ((ch: "P" | "E") => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -47,6 +49,10 @@ export class DesignerCanvas {
     this.onChange = fn;
   }
 
+  setUniqueClearer(fn: ((ch: "P" | "E") => void) | null): void {
+    this.uniqueClearer = fn;
+  }
+
   private onPointerDown = (event: PointerEvent): void => {
     this.painting = true;
     this.canvas.setPointerCapture(event.pointerId);
@@ -77,12 +83,16 @@ export class DesignerCanvas {
     if (col < 0 || col >= width) return;
     if (getCell(this.layout, col, row) === brush) return;
 
-    // Unique player / exit
+    // Unique player / exit (optionally across every floor)
     if (brush === "P" || brush === "E") {
-      for (let r = 0; r < this.layout.length; r++) {
-        for (let c = 0; c < width; c++) {
-          if (getCell(this.layout, c, r) === brush) {
-            setCell(this.layout, c, r, ".");
+      if (this.uniqueClearer) {
+        this.uniqueClearer(brush);
+      } else {
+        for (let r = 0; r < this.layout.length; r++) {
+          for (let c = 0; c < width; c++) {
+            if (getCell(this.layout, c, r) === brush) {
+              setCell(this.layout, c, r, ".");
+            }
           }
         }
       }
@@ -119,6 +129,27 @@ export class DesignerCanvas {
           // empty path — leave dark
         } else if (ch === "#") {
           ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+        } else if (ch === "^" || ch === "v") {
+          ctx.beginPath();
+          if (ch === "^") {
+            ctx.moveTo(x + CELL / 2, y + 3);
+            ctx.lineTo(x + CELL - 3, y + CELL / 2);
+            ctx.lineTo(x + CELL * 0.62, y + CELL / 2);
+            ctx.lineTo(x + CELL * 0.62, y + CELL - 3);
+            ctx.lineTo(x + CELL * 0.38, y + CELL - 3);
+            ctx.lineTo(x + CELL * 0.38, y + CELL / 2);
+            ctx.lineTo(x + 3, y + CELL / 2);
+          } else {
+            ctx.moveTo(x + CELL * 0.38, y + 3);
+            ctx.lineTo(x + CELL * 0.62, y + 3);
+            ctx.lineTo(x + CELL * 0.62, y + CELL / 2);
+            ctx.lineTo(x + CELL - 3, y + CELL / 2);
+            ctx.lineTo(x + CELL / 2, y + CELL - 3);
+            ctx.lineTo(x + 3, y + CELL / 2);
+            ctx.lineTo(x + CELL * 0.38, y + CELL / 2);
+          }
+          ctx.closePath();
+          ctx.fill();
         } else {
           ctx.fillRect(x + 3, y + 3, CELL - 6, CELL - 6);
           ctx.font = "10px monospace";

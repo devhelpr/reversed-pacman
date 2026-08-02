@@ -1,4 +1,4 @@
-import type { LevelDefinition } from "../../core/maze/LevelDefinition";
+import type { LevelDefinition, FloorPos } from "../../core/maze/LevelDefinition";
 import type { Maze } from "../../core/maze/Maze";
 import type { TrapdoorVisual, TrapVisualState } from "../../core/render/CanvasRenderer";
 import type { GridPos, LoseReason } from "../../core/types";
@@ -7,12 +7,11 @@ import type { Player } from "../player/Player";
 export type { TrapVisualState };
 
 interface TrapdoorState {
+  floor: number;
   col: number;
   row: number;
   open: boolean;
-  /** Seconds until the next open/close toggle. */
   timer: number;
-  /** 0 closed → 1 fully open (animated hatch). */
   openAmount: number;
 }
 
@@ -20,13 +19,12 @@ function randomBetween(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-function posKey(col: number, row: number): string {
-  return `${col},${row}`;
+function posKey(floor: number, col: number, row: number): string {
+  return `${floor}:${col},${row}`;
 }
 
 /**
- * Timed hazards + player interactions with bait, slime, rifts, etc.
- * Trap doors are independent, randomized, and open more slowly than they close.
+ * Timed hazards + player interactions with bait, slime, rifts, lifts, etc.
  */
 export class TrapSystem {
   private readonly level: LevelDefinition;
@@ -34,26 +32,22 @@ export class TrapSystem {
   private lastRiftKey: string | null = null;
   private readonly doors = new Map<string, TrapdoorState>();
 
-  constructor(level: LevelDefinition, trapdoorPositions: GridPos[]) {
+  constructor(level: LevelDefinition, trapdoorPositions: FloorPos[]) {
     this.level = level;
-    for (const pos of trapdoorPositions) {
-      this.doors.set(posKey(pos.col, pos.row), {
-        col: pos.col,
-        row: pos.row,
-        open: false,
-        // Stagger first openings so they don't all pop at once
-        timer: randomBetween(level.trapdoorClosedMinSeconds * 0.6, level.trapdoorClosedMaxSeconds),
-        openAmount: 0,
-      });
-    }
+    this.seedDoors(trapdoorPositions);
   }
 
-  reset(trapdoorPositions: GridPos[]): void {
+  reset(trapdoorPositions: FloorPos[]): void {
     this.time = 0;
     this.lastRiftKey = null;
     this.doors.clear();
+    this.seedDoors(trapdoorPositions);
+  }
+
+  private seedDoors(trapdoorPositions: FloorPos[]): void {
     for (const pos of trapdoorPositions) {
-      this.doors.set(posKey(pos.col, pos.row), {
+      this.doors.set(posKey(pos.floor, pos.col, pos.row), {
+        floor: pos.floor,
         col: pos.col,
         row: pos.row,
         open: false,
@@ -68,7 +62,7 @@ export class TrapSystem {
 
   tick(dt: number): void {
     this.time += dt;
-    const openSpeed = 2.2; // hatch open lerp per second
+    const openSpeed = 2.2;
     const closeSpeed = 3.4;
 
     for (const door of this.doors.values()) {
@@ -90,9 +84,11 @@ export class TrapSystem {
     }
   }
 
-  getVisualState(): TrapVisualState {
+  /** Visuals for a single visible floor. */
+  getVisualState(floor: number): TrapVisualState {
     const trapdoors: TrapdoorVisual[] = [];
     for (const door of this.doors.values()) {
+      if (door.floor !== floor) continue;
       trapdoors.push({
         col: door.col,
         row: door.row,
@@ -106,9 +102,8 @@ export class TrapSystem {
     };
   }
 
-  isTrapdoorLethal(col: number, row: number): boolean {
-    const door = this.doors.get(posKey(col, row));
-    // Only deadly once the hatch has mostly dropped open
+  isTrapdoorLethal(floor: number, col: number, row: number): boolean {
+    const door = this.doors.get(posKey(floor, col, row));
     return !!door && door.openAmount >= 0.55;
   }
 
@@ -117,15 +112,10 @@ export class TrapSystem {
     return this.time % cycle >= this.level.shockCycleSeconds;
   }
 
-  /**
-   * Apply tile interactions for the player's current cell.
-   * Returns a lose reason if a hazard kills the player instantly.
-   * Trap doors return "trapdoor" so the session can play a fall animation.
-   */
   resolvePlayerTile(player: Player, maze: Maze, justArrived: boolean): LoseReason {
     if (player.isFalling) return null;
 
-    const tile = maze.getTile(player.col, player.row);
+    const tile = maze.getTile(player.floor, player.col, player.row);
 
     if (tile === "slime") {
       player.speedMultiplier = this.level.slimeSpeedFactor;
@@ -133,11 +123,11 @@ export class TrapSystem {
       player.speedMultiplier = 1;
     }
 
-    if (tile === "bait" && maze.eatBait(player.col, player.row)) {
+    if (tile === "bait" && maze.eatBait(player.floor, player.col, player.row)) {
       player.activateBait(this.level.baitDurationSeconds);
     }
 
-    if (tile === "trapdoor" && this.isTrapdoorLethal(player.col, player.row)) {
+    if (tile === "trapdoor" && this.isTrapdoorLethal(player.floor, player.col, player.row)) {
       return "trapdoor";
     }
 
@@ -155,17 +145,17 @@ export class TrapSystem {
   }
 
   private tryTeleport(player: Player, maze: Maze): void {
-    const key = `${player.col},${player.row}`;
+    const key = `${player.floor}:${player.col},${player.row}`;
     if (this.lastRiftKey === key) return;
 
-    const dest = maze.pairedRift({ col: player.col, row: player.row });
+    const dest = maze.pairedRift(player.floor, { col: player.col, row: player.row });
     if (!dest) return;
 
     player.col = dest.col;
     player.row = dest.row;
     player.progress = 0;
     player.direction = "none";
-    this.lastRiftKey = `${dest.col},${dest.row}`;
+    this.lastRiftKey = `${player.floor}:${dest.col},${dest.row}`;
   }
 }
 

@@ -1,5 +1,6 @@
 import { MovableEntity } from "../../core/entities/MovableEntity";
 import type { Maze } from "../../core/maze/Maze";
+import type { FloorPos } from "../../core/maze/LevelDefinition";
 import type { Direction, GridPos } from "../../core/types";
 import { DIRECTION_VECTORS, OPPOSITE_DIRECTION } from "../../core/types";
 import { manhattan } from "../traps/TrapSystem";
@@ -7,7 +8,8 @@ import { manhattan } from "../traps/TrapSystem";
 export type GhostMood = "forage" | "hunt";
 
 /**
- * Ghost that forages for dots, or hunts the player after bait is eaten.
+ * Ghost that forages for dots on its floor, or hunts the player when bait is active
+ * and the player shares that floor.
  */
 export class Ghost extends MovableEntity {
   readonly index: number;
@@ -18,7 +20,7 @@ export class Ghost extends MovableEntity {
   private eatCooldown: number;
   private readonly eatInterval: number;
 
-  constructor(start: GridPos, speed: number, index: number, eatIntervalSeconds: number) {
+  constructor(start: FloorPos, speed: number, index: number, eatIntervalSeconds: number) {
     super(start, speed);
     this.index = index;
     this.baseSpeed = speed;
@@ -26,20 +28,28 @@ export class Ghost extends MovableEntity {
     this.eatCooldown = eatIntervalSeconds * ((index % 4) / 4);
   }
 
-  tick(dt: number, maze: Maze, huntTarget: GridPos | null, huntSpeedMultiplier: number): void {
+  tick(
+    dt: number,
+    maze: Maze,
+    huntTarget: (GridPos & { floor: number }) | null,
+    huntSpeedMultiplier: number,
+  ): void {
     if (!this.alive) return;
 
-    this.mood = huntTarget ? "hunt" : "forage";
+    const huntingHere = huntTarget !== null && huntTarget.floor === this.floor;
+    this.mood = huntingHere ? "hunt" : "forage";
     this.speed = this.baseSpeed * (this.mood === "hunt" ? huntSpeedMultiplier : 1);
 
+    const target = huntingHere ? huntTarget : null;
+
     if (this.direction === "none") {
-      this.pickNewDirection(maze, huntTarget);
+      this.pickNewDirection(maze, target);
     }
 
-    const arrived = this.update(dt, maze);
+    const arrived = this.update(dt, (c, r) => maze.isWalkable(this.floor, c, r));
 
     if (arrived || this.direction === "none") {
-      this.pickNewDirection(maze, huntTarget);
+      this.pickNewDirection(maze, target);
     }
 
     this.animTimer += dt;
@@ -50,8 +60,8 @@ export class Ghost extends MovableEntity {
 
     if (this.mood === "forage") {
       this.eatCooldown -= dt;
-      if (this.eatCooldown <= 0 && maze.hasDot(this.col, this.row)) {
-        maze.eatDot(this.col, this.row);
+      if (this.eatCooldown <= 0 && maze.hasDot(this.floor, this.col, this.row)) {
+        maze.eatDot(this.floor, this.col, this.row);
         this.eatCooldown = this.eatInterval;
       }
     }
@@ -65,7 +75,7 @@ export class Ghost extends MovableEntity {
   }
 
   private pickNewDirection(maze: Maze, huntTarget: GridPos | null): void {
-    const options = maze.walkableDirections(this.gridPos);
+    const options = maze.walkableDirections(this.floor, this.gridPos);
     if (options.length === 0) {
       this.direction = "none";
       return;
@@ -86,7 +96,6 @@ export class Ghost extends MovableEntity {
         const v = DIRECTION_VECTORS[dir];
         const next = { col: this.col + v.x, row: this.row + v.y };
         const score = manhattan(next, huntTarget);
-        // Slight jitter so ghosts don't always stack identically
         const jitter = ((this.index * 17 + dir.charCodeAt(0)) % 5) * 0.01;
         if (score + jitter < bestScore) {
           bestScore = score + jitter;
@@ -99,8 +108,8 @@ export class Ghost extends MovableEntity {
     }
 
     const withDots = choices.filter((d) => {
-      const n = maze.neighbor(this.gridPos, d);
-      return n !== null && maze.hasDot(n.col, n.row);
+      const n = maze.neighbor(this.floor, this.gridPos, d);
+      return n !== null && maze.hasDot(this.floor, n.col, n.row);
     });
 
     const pool = withDots.length > 0 ? withDots : choices;

@@ -46,5 +46,10 @@ export function getFirstLevel(): LevelDefinition {
   return first;
 }
 
-export { type LevelDefinition, parseMaze } from "../../core/maze/LevelDefinition";
-export type { ParsedMaze } from "../../core/maze/LevelDefinition";
+export {
+  type LevelDefinition,
+  parseLevel,
+  normalizeFloors,
+  syncLayoutFromFloors,
+} from "../../core/maze/LevelDefinition";
+export type { FloorDefinition, FloorPos, ParsedLevel } from "../../core/maze/LevelDefinition";

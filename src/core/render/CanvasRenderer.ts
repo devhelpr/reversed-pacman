@@ -6,6 +6,7 @@ import {
   createDotSprite,
   createExitSprite,
   createGhostSprites,
+  createLiftSprite,
   createPlayerSprites,
   createRiftSprite,
   createShockSprite,
@@ -45,6 +46,9 @@ export interface HudSnapshot {
   allGhostsCaught: boolean;
   baitRemaining: number;
   loseReason: LoseReason;
+  floorName: string;
+  floorIndex: number;
+  floorCount: number;
 }
 
 export interface TrapdoorVisual {
@@ -85,6 +89,8 @@ export class CanvasRenderer {
   private readonly shockIdle: HTMLCanvasElement;
   private readonly shockLive: HTMLCanvasElement;
   private readonly riftSprites: HTMLCanvasElement[];
+  private readonly liftUpSprites: HTMLCanvasElement[];
+  private readonly liftDownSprites: HTMLCanvasElement[];
   private exitFrame = 0;
   private exitSprites: HTMLCanvasElement[];
   private trapAnim = 0;
@@ -114,6 +120,8 @@ export class CanvasRenderer {
     this.shockIdle = createShockSprite(false);
     this.shockLive = createShockSprite(true);
     this.riftSprites = [createRiftSprite(0), createRiftSprite(1)];
+    this.liftUpSprites = [createLiftSprite("up", 0), createLiftSprite("up", 1)];
+    this.liftDownSprites = [createLiftSprite("down", 0), createLiftSprite("down", 1)];
   }
 
   resizeForMaze(maze: Maze, maxCssWidth: number, maxCssHeight: number): void {
@@ -136,7 +144,7 @@ export class CanvasRenderer {
     this.trapAnim += dt * 3;
   }
 
-  render(maze: Maze, actors: RenderableActor[], traps: TrapVisualState): void {
+  render(maze: Maze, actors: RenderableActor[], traps: TrapVisualState, floorIndex = 0): void {
     const ctx = this.bctx;
     const tw = this.tileSize;
     const anim = Math.floor(this.trapAnim);
@@ -147,7 +155,7 @@ export class CanvasRenderer {
     ctx.fillStyle = "#050510";
     ctx.fillRect(0, 0, this.buffer.width, this.buffer.height);
 
-    const tiles = maze.snapshotTiles();
+    const tiles = maze.snapshotTiles(floorIndex);
     for (let row = 0; row < maze.height; row++) {
       for (let col = 0; col < maze.width; col++) {
         const tile = tiles[row]![col]!;
@@ -201,6 +209,20 @@ export class CanvasRenderer {
           case "rift":
             ctx.drawImage(
               this.riftSprites[anim % this.riftSprites.length]!,
+              x + (tw - 8) / 2,
+              y + (tw - 8) / 2,
+            );
+            break;
+          case "liftUp":
+            ctx.drawImage(
+              this.liftUpSprites[anim % this.liftUpSprites.length]!,
+              x + (tw - 8) / 2,
+              y + (tw - 8) / 2,
+            );
+            break;
+          case "liftDown":
+            ctx.drawImage(
+              this.liftDownSprites[anim % this.liftDownSprites.length]!,
               x + (tw - 8) / 2,
               y + (tw - 8) / 2,
             );

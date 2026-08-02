@@ -11,6 +11,7 @@ export function formatTime(seconds: number): string {
 export interface HudElements {
   root: HTMLElement;
   level: HTMLElement;
+  floor: HTMLElement;
   dots: HTMLElement;
   ghosts: HTMLElement;
   time: HTMLElement;
@@ -30,6 +31,10 @@ export function createHud(parent: HTMLElement): HudElements {
       <div class="hud-group">
         <span class="hud-label">Level</span>
         <span data-hud="level" class="hud-value">—</span>
+      </div>
+      <div class="hud-group">
+        <span class="hud-label">Floor</span>
+        <span data-hud="floor" class="hud-value">—</span>
       </div>
       <div class="hud-group">
         <span class="hud-label">Dots left</span>
@@ -64,6 +69,7 @@ export function createHud(parent: HTMLElement): HudElements {
   return {
     root: parent,
     level: q('[data-hud="level"]'),
+    floor: q('[data-hud="floor"]'),
     dots: q('[data-hud="dots"]'),
     ghosts: q('[data-hud="ghosts"]'),
     time: q('[data-hud="time"]'),
@@ -80,6 +86,10 @@ export function createHud(parent: HTMLElement): HudElements {
 
 export function updateHud(els: HudElements, snap: HudSnapshot): void {
   els.level.textContent = snap.levelName;
+  els.floor.textContent =
+    snap.floorCount > 1
+      ? `${snap.floorName} (${snap.floorIndex + 1}/${snap.floorCount})`
+      : snap.floorName;
   els.dots.textContent = String(snap.dotsRemaining);
   els.ghosts.textContent = String(snap.ghostsRemaining);
   els.time.textContent = formatTime(snap.elapsedSeconds);
@@ -88,9 +98,15 @@ export function updateHud(els: HudElements, snap: HudSnapshot): void {
   if (snap.baitRemaining > 0) {
     els.objective.textContent = `BAIT ACTIVE — ghosts are hunting you! (${snap.baitRemaining.toFixed(1)}s)`;
   } else if (!snap.allGhostsCaught) {
-    els.objective.textContent = "Chase ghosts, avoid traps. Blue bait flips the hunt — briefly.";
+    els.objective.textContent =
+      snap.floorCount > 1
+        ? "Chase ghosts across floors. Lifts (^/v) are one-way — bait flips the hunt briefly."
+        : "Chase ghosts, avoid traps. Blue bait flips the hunt — briefly.";
   } else {
-    els.objective.textContent = "All ghosts caught! Reach the glowing exit to finish.";
+    els.objective.textContent =
+      snap.floorCount > 1
+        ? "All ghosts caught! Use lifts if needed, then reach the glowing exit."
+        : "All ghosts caught! Reach the glowing exit to finish.";
   }
 
   if (snap.phase === "ready") {

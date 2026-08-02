@@ -22,7 +22,9 @@ export type TileKind =
   | "slime" // slows the player
   | "shock" // timed electric plate
   | "rift" // paired teleporter
-  | "bonus"; // player-collectible score gem
+  | "bonus" // player-collectible score gem
+  | "liftUp" // one-way lift to floor above
+  | "liftDown"; // one-way lift to floor below
 
 export type GamePhase = "ready" | "playing" | "won" | "lost" | "paused";
 

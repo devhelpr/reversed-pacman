@@ -1,11 +1,11 @@
 import type { Direction, GridPos, Vec2 } from "../types";
 import { DIRECTION_VECTORS } from "../types";
-import type { Maze } from "../maze/Maze";
 
 /**
- * Grid-based entity that moves smoothly between tiles.
+ * Grid-based entity that moves smoothly between tiles on a single floor.
  */
 export class MovableEntity {
+  floor: number;
   col: number;
   row: number;
   /** Fractional progress toward the next tile (0..1). */
@@ -15,7 +15,8 @@ export class MovableEntity {
   speed: number;
   alive = true;
 
-  constructor(start: GridPos, speed: number) {
+  constructor(start: GridPos & { floor?: number }, speed: number) {
+    this.floor = start.floor ?? 0;
     this.col = start.col;
     this.row = start.row;
     this.speed = speed;
@@ -42,20 +43,16 @@ export class MovableEntity {
   }
 
   /**
-   * Advance movement. `canEnter` gates tile entry (maze walkability).
+   * Advance movement. `canEnter` gates tile entry.
    * Returns true when the entity just arrived on a new tile.
    */
-  update(
-    dt: number,
-    maze: Maze,
-    canEnter: (col: number, row: number) => boolean = (c, r) => maze.isWalkable(c, r),
-  ): boolean {
+  update(dt: number, canEnter: (col: number, row: number) => boolean): boolean {
     if (!this.alive) return false;
 
     let arrived = false;
 
     if (this.direction === "none") {
-      this.tryStartMove(maze, canEnter);
+      this.tryStartMove(canEnter);
       return false;
     }
 
@@ -68,7 +65,6 @@ export class MovableEntity {
       this.progress -= 1;
       arrived = true;
 
-      // Prefer queued turn at intersections
       if (this.nextDirection !== "none" && this.nextDirection !== this.direction) {
         const nv = DIRECTION_VECTORS[this.nextDirection];
         const nc = this.col + nv.x;
@@ -79,17 +75,15 @@ export class MovableEntity {
         }
       }
 
-      // Continue straight if possible
       const fv = DIRECTION_VECTORS[this.direction];
       if (!canEnter(this.col + fv.x, this.row + fv.y)) {
         this.direction = "none";
         this.progress = 0;
-        this.tryStartMove(maze, canEnter);
+        this.tryStartMove(canEnter);
         break;
       }
     }
 
-    // Mid-tile reverse is allowed for player feel
     if (
       this.nextDirection !== "none" &&
       this.direction !== "none" &&
@@ -105,7 +99,7 @@ export class MovableEntity {
     return arrived;
   }
 
-  private tryStartMove(_maze: Maze, canEnter: (col: number, row: number) => boolean): void {
+  private tryStartMove(canEnter: (col: number, row: number) => boolean): void {
     const desired = this.nextDirection !== "none" ? this.nextDirection : this.direction;
     if (desired === "none") return;
 

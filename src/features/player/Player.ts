@@ -1,21 +1,20 @@
 import { MovableEntity } from "../../core/entities/MovableEntity";
 import type { Maze } from "../../core/maze/Maze";
-import type { Direction, GridPos } from "../../core/types";
+import type { FloorPos } from "../../core/maze/LevelDefinition";
+import type { Direction } from "../../core/types";
 
 export class Player extends MovableEntity {
   readonly baseSpeed: number;
   animTimer = 0;
   animFrame = 0;
-  /** Multiplier from slime / other floor effects. */
   speedMultiplier = 1;
-  /** Seconds remaining of bait "hunted" status. */
   baitRemaining = 0;
-  /** 0..1 progress while falling through a trap door. */
   fallProgress = 0;
   private falling = false;
   private fallDuration = 0.65;
+  private lastLiftKey: string | null = null;
 
-  constructor(start: GridPos, speed: number) {
+  constructor(start: FloorPos, speed: number) {
     super(start, speed);
     this.baseSpeed = speed;
   }
@@ -47,10 +46,6 @@ export class Player extends MovableEntity {
     this.setDesiredDirection(desired);
   }
 
-  /**
-   * Returns whether the player just arrived on a new tile.
-   * Also advances fall animation; when fall completes, alive becomes false.
-   */
   tick(dt: number, maze: Maze): boolean {
     if (this.falling) {
       this.fallProgress = Math.min(1, this.fallProgress + dt / this.fallDuration);
@@ -65,7 +60,7 @@ export class Player extends MovableEntity {
       this.baitRemaining = Math.max(0, this.baitRemaining - dt);
     }
 
-    const arrived = this.update(dt, maze);
+    const arrived = this.update(dt, (c, r) => maze.isWalkable(this.floor, c, r));
     if (this.direction !== "none") {
       this.animTimer += dt;
       if (this.animTimer >= 0.12) {
@@ -76,8 +71,39 @@ export class Player extends MovableEntity {
     return arrived;
   }
 
+  /** Take a one-way lift if standing on one. Returns true when floor changed. */
+  tryLift(maze: Maze, justArrived: boolean): boolean {
+    if (!justArrived && this.lastLiftKey) {
+      const tile = maze.getTile(this.floor, this.col, this.row);
+      if (tile !== "liftUp" && tile !== "liftDown") {
+        this.lastLiftKey = null;
+      }
+      return false;
+    }
+    if (!justArrived) return false;
+
+    const key = `${this.floor}:${this.col},${this.row}`;
+    if (this.lastLiftKey === key) return false;
+
+    const dest = maze.liftDestination(this.floor, this.col, this.row);
+    if (!dest) {
+      this.lastLiftKey = null;
+      return false;
+    }
+
+    this.floor = dest.floor;
+    this.col = dest.col;
+    this.row = dest.row;
+    this.progress = 0;
+    this.direction = "none";
+    this.nextDirection = "none";
+    this.lastLiftKey = `${this.floor}:${this.col},${this.row}`;
+    return true;
+  }
+
   overlaps(other: MovableEntity, threshold = 0.55): boolean {
     if (!this.alive || !other.alive || this.falling) return false;
+    if (this.floor !== other.floor) return false;
     const a = this.getWorldPos();
     const b = other.getWorldPos();
     const dx = a.x - b.x;
