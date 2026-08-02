@@ -10,8 +10,15 @@ export class Player extends MovableEntity {
   speedMultiplier = 1;
   baitRemaining = 0;
   fallProgress = 0;
+  liftProgress = 0;
+  liftDir: "up" | "down" | null = null;
+  /** Floor shown during the first half of a lift ride. */
+  liftFromFloor = 0;
   private falling = false;
+  private lifting = false;
   private fallDuration = 0.65;
+  private liftDuration = 0.55;
+  private pendingLiftDest: FloorPos | null = null;
   private lastLiftKey: string | null = null;
 
   constructor(start: FloorPos, speed: number) {
@@ -27,12 +34,16 @@ export class Player extends MovableEntity {
     return this.falling;
   }
 
+  get isLifting(): boolean {
+    return this.lifting;
+  }
+
   activateBait(durationSeconds: number): void {
     this.baitRemaining = Math.max(this.baitRemaining, durationSeconds);
   }
 
   beginFall(durationSeconds: number): void {
-    if (this.falling) return;
+    if (this.falling || this.lifting) return;
     this.falling = true;
     this.fallProgress = 0;
     this.fallDuration = Math.max(0.1, durationSeconds);
@@ -41,8 +52,21 @@ export class Player extends MovableEntity {
     this.progress = 0;
   }
 
+  beginLift(dest: FloorPos, dir: "up" | "down", durationSeconds = 0.55): void {
+    if (this.falling || this.lifting) return;
+    this.lifting = true;
+    this.liftProgress = 0;
+    this.liftDir = dir;
+    this.liftFromFloor = this.floor;
+    this.liftDuration = Math.max(0.2, durationSeconds);
+    this.pendingLiftDest = dest;
+    this.direction = "none";
+    this.nextDirection = "none";
+    this.progress = 0;
+  }
+
   handleInput(desired: Direction): void {
-    if (this.falling) return;
+    if (this.falling || this.lifting) return;
     this.setDesiredDirection(desired);
   }
 
@@ -51,6 +75,24 @@ export class Player extends MovableEntity {
       this.fallProgress = Math.min(1, this.fallProgress + dt / this.fallDuration);
       if (this.fallProgress >= 1) {
         this.alive = false;
+      }
+      return false;
+    }
+
+    if (this.lifting) {
+      this.liftProgress = Math.min(1, this.liftProgress + dt / this.liftDuration);
+      if (this.pendingLiftDest && this.liftProgress >= 0.5) {
+        const dest = this.pendingLiftDest;
+        this.floor = dest.floor;
+        this.col = dest.col;
+        this.row = dest.row;
+        this.lastLiftKey = `${this.floor}:${this.col},${this.row}`;
+        this.pendingLiftDest = null;
+      }
+      if (this.liftProgress >= 1) {
+        this.lifting = false;
+        this.liftDir = null;
+        this.liftProgress = 0;
       }
       return false;
     }
@@ -71,8 +113,10 @@ export class Player extends MovableEntity {
     return arrived;
   }
 
-  /** Take a one-way lift if standing on one. Returns true when floor changed. */
+  /** Take a one-way lift if standing on one. Returns true when a ride starts. */
   tryLift(maze: Maze, justArrived: boolean): boolean {
+    if (this.falling || this.lifting) return false;
+
     if (!justArrived && this.lastLiftKey) {
       const tile = maze.getTile(this.floor, this.col, this.row);
       if (tile !== "liftUp" && tile !== "liftDown") {
@@ -91,18 +135,14 @@ export class Player extends MovableEntity {
       return false;
     }
 
-    this.floor = dest.floor;
-    this.col = dest.col;
-    this.row = dest.row;
-    this.progress = 0;
-    this.direction = "none";
-    this.nextDirection = "none";
-    this.lastLiftKey = `${this.floor}:${this.col},${this.row}`;
+    const tile = maze.getTile(this.floor, this.col, this.row);
+    const dir = tile === "liftUp" ? "up" : "down";
+    this.beginLift(dest, dir);
     return true;
   }
 
   overlaps(other: MovableEntity, threshold = 0.55): boolean {
-    if (!this.alive || !other.alive || this.falling) return false;
+    if (!this.alive || !other.alive || this.falling || this.lifting) return false;
     if (this.floor !== other.floor) return false;
     const a = this.getWorldPos();
     const b = other.getWorldPos();
@@ -114,6 +154,9 @@ export class Player extends MovableEntity {
   kill(): void {
     this.alive = false;
     this.falling = false;
+    this.lifting = false;
+    this.liftDir = null;
+    this.pendingLiftDest = null;
     this.direction = "none";
     this.progress = 0;
   }

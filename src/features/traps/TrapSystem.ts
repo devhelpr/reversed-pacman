@@ -113,7 +113,7 @@ export class TrapSystem {
   }
 
   resolvePlayerTile(player: Player, maze: Maze, justArrived: boolean): LoseReason {
-    if (player.isFalling) return null;
+    if (player.isFalling || player.isLifting) return null;
 
     const tile = maze.getTile(player.floor, player.col, player.row);
 

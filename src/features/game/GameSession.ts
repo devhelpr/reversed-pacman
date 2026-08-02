@@ -78,6 +78,11 @@ export class GameSession {
       return;
     }
 
+    if (this.player.isLifting) {
+      this.player.tick(dt, this.maze);
+      return;
+    }
+
     this.player.handleInput(desiredDirection);
     const arrived = this.player.tick(dt, this.maze);
 
@@ -137,26 +142,37 @@ export class GameSession {
   }
 
   getTrapVisuals(): TrapVisualState {
-    return this.traps.getVisualState(this.player.floor);
+    return this.traps.getVisualState(this.getViewFloor());
   }
 
   getViewFloor(): number {
+    if (this.player.isLifting && this.player.liftProgress < 0.5) {
+      return this.player.liftFromFloor;
+    }
     return this.player.floor;
   }
 
+  getLiftTransition(): { progress: number; dir: "up" | "down" } | null {
+    if (!this.player.isLifting || !this.player.liftDir) return null;
+    return { progress: this.player.liftProgress, dir: this.player.liftDir };
+  }
+
   getActors(): RenderableActor[] {
-    const viewFloor = this.player.floor;
+    const viewFloor = this.getViewFloor();
     const hunted = this.player.isHunted;
     const falling = this.player.isFalling;
+    const lifting = this.player.isLifting;
     const actors: RenderableActor[] = [
       {
         kind: "player",
         worldPos: this.player.getWorldPos(),
         direction: this.player.direction === "none" ? "right" : this.player.direction,
         animFrame: this.player.animFrame,
-        alive: this.player.alive || falling,
+        alive: this.player.alive || falling || lifting,
         hunted,
         fallProgress: falling ? this.player.fallProgress : undefined,
+        liftProgress: lifting ? this.player.liftProgress : undefined,
+        liftDir: lifting ? (this.player.liftDir ?? undefined) : undefined,
       },
     ];
 

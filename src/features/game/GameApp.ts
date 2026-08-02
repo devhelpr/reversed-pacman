@@ -179,6 +179,7 @@ export class GameApp {
       this.session.getActors(),
       this.session.getTrapVisuals(),
       this.session.getViewFloor(),
+      this.session.getLiftTransition(),
     );
     updateHud(this.hud, this.session.getHud());
   };

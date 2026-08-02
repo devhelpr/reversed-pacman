@@ -31,6 +31,14 @@ export interface RenderableActor {
   hunting?: boolean;
   /** 0..1 while falling into a trap door. */
   fallProgress?: number;
+  /** 0..1 while riding a floor lift. */
+  liftProgress?: number;
+  liftDir?: "up" | "down";
+}
+
+export interface LiftTransition {
+  progress: number;
+  dir: "up" | "down";
 }
 
 export interface HudSnapshot {
@@ -144,7 +152,13 @@ export class CanvasRenderer {
     this.trapAnim += dt * 3;
   }
 
-  render(maze: Maze, actors: RenderableActor[], traps: TrapVisualState, floorIndex = 0): void {
+  render(
+    maze: Maze,
+    actors: RenderableActor[],
+    traps: TrapVisualState,
+    floorIndex = 0,
+    liftTransition: LiftTransition | null = null,
+  ): void {
     const ctx = this.bctx;
     const tw = this.tileSize;
     const anim = Math.floor(this.trapAnim);
@@ -154,6 +168,20 @@ export class CanvasRenderer {
 
     ctx.fillStyle = "#050510";
     ctx.fillRect(0, 0, this.buffer.width, this.buffer.height);
+
+    // Subtle floor slide while riding a lift
+    const liftSlide =
+      liftTransition != null
+        ? Math.sin(Math.min(1, Math.max(0, liftTransition.progress)) * Math.PI) *
+          tw *
+          0.55 *
+          (liftTransition.dir === "up" ? 1 : -1)
+        : 0;
+
+    ctx.save();
+    if (liftSlide !== 0) {
+      ctx.translate(0, liftSlide);
+    }
 
     const tiles = maze.snapshotTiles(floorIndex);
     for (let row = 0; row < maze.height; row++) {
@@ -245,13 +273,25 @@ export class CanvasRenderer {
       if (actor.fallProgress !== undefined && actor.fallProgress >= 1) continue;
 
       const fall = actor.fallProgress ?? 0;
-      const scale = actor.kind === "player" && fall > 0 ? 1 - fall * 0.85 : 1;
-      const sink = actor.kind === "player" && fall > 0 ? fall * tw * 0.7 : 0;
+      const lift = actor.liftProgress;
+      const liftDir = actor.liftDir ?? "up";
+      let scale = actor.kind === "player" && fall > 0 ? 1 - fall * 0.85 : 1;
+      let sink = actor.kind === "player" && fall > 0 ? fall * tw * 0.7 : 0;
+      let alpha = 1;
+
+      if (actor.kind === "player" && lift !== undefined) {
+        const half = lift < 0.5 ? lift * 2 : (lift - 0.5) * 2;
+        scale = lift < 0.5 ? 1 - half * 0.85 : 0.15 + half * 0.85;
+        const travel = lift < 0.5 ? -half : 1 - half;
+        sink = (liftDir === "up" ? travel : -travel) * tw * 1.35;
+        alpha = lift < 0.5 ? 1 - half * 0.45 : 0.55 + half * 0.45;
+      }
+
       const px = actor.worldPos.x * tw - (SPRITE * scale) / 2;
       const py = actor.worldPos.y * tw - (SPRITE * scale) / 2 + sink;
 
       if (actor.kind === "player") {
-        if (actor.hunted && fall === 0) {
+        if (actor.hunted && fall === 0 && lift === undefined) {
           ctx.fillStyle = "#4B7BFF88";
           ctx.beginPath();
           ctx.arc(actor.worldPos.x * tw, actor.worldPos.y * tw, 9, 0, Math.PI * 2);
@@ -270,6 +310,11 @@ export class CanvasRenderer {
           ctx.globalAlpha = 1 - fall * 0.35;
           ctx.drawImage(sprite, px, py, SPRITE * scale, SPRITE * scale);
           ctx.restore();
+        } else if (lift !== undefined) {
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.drawImage(sprite, px, py, SPRITE * scale, SPRITE * scale);
+          ctx.restore();
         } else {
           ctx.drawImage(sprite, px, py);
         }
@@ -282,9 +327,63 @@ export class CanvasRenderer {
       }
     }
 
+    ctx.restore();
+
+    if (liftTransition) {
+      this.drawLiftWipe(ctx, liftTransition);
+    }
+
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.imageSmoothingEnabled = false;
     this.ctx.drawImage(this.buffer, 0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  /** Horizontal shutter + flash while changing floors. */
+  private drawLiftWipe(ctx: CanvasRenderingContext2D, lift: LiftTransition): void {
+    const t = Math.min(1, Math.max(0, lift.progress));
+    const peak = Math.sin(t * Math.PI); // 0 → 1 → 0
+    const w = this.buffer.width;
+    const h = this.buffer.height;
+    const band = Math.floor(h * 0.42 * peak);
+
+    ctx.save();
+    ctx.fillStyle = `rgba(5, 5, 16, ${0.2 + peak * 0.65})`;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.fillStyle = lift.dir === "up" ? "#5CFF8A" : "#FF9E4A";
+    ctx.globalAlpha = 0.35 + peak * 0.45;
+    if (lift.dir === "up") {
+      ctx.fillRect(0, 0, w, band);
+      ctx.fillRect(0, h - band, w, band);
+    } else {
+      ctx.fillRect(0, h - band, w, band);
+      ctx.fillRect(0, 0, w, band);
+    }
+
+    // Center streak in travel direction
+    ctx.globalAlpha = peak * 0.55;
+    ctx.fillStyle = "#ffffff";
+    const streakY = lift.dir === "up" ? h * (1 - t) : h * t;
+    ctx.fillRect(0, streakY - 1, w, 2);
+
+    // Tiny arrow cue
+    ctx.globalAlpha = 0.7 + peak * 0.3;
+    ctx.fillStyle = lift.dir === "up" ? "#5CFF8A" : "#FF9E4A";
+    const cx = w / 2;
+    const cy = h / 2;
+    ctx.beginPath();
+    if (lift.dir === "up") {
+      ctx.moveTo(cx, cy - 10 - peak * 6);
+      ctx.lineTo(cx + 8, cy + 4);
+      ctx.lineTo(cx - 8, cy + 4);
+    } else {
+      ctx.moveTo(cx, cy + 10 + peak * 6);
+      ctx.lineTo(cx + 8, cy - 4);
+      ctx.lineTo(cx - 8, cy - 4);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
   }
 
   /** Draw closed hatch, open pit, or a sliding blend between them. */
