@@ -160,6 +160,17 @@ body {
   background: linear-gradient(135deg, transparent 40%, #ffe14a 41% 59%, transparent 60%), #3a3a4a;
 }
 
+.swatch-rift {
+  background: radial-gradient(circle at center, #e0a0ff 25%, #b14bff 26% 55%, #7a2ad6 56%);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px #3a1060;
+}
+
+.swatch-bonus {
+  background: linear-gradient(135deg, #fff6c8 20%, #ffd24a 45%, #ff9e1a 70%);
+  clip-path: polygon(50% 0%, 65% 35%, 100% 50%, 65% 65%, 50% 100%, 35% 65%, 0% 50%, 35% 35%);
+}
+
 .swatch-exit {
   background: #0a0a1a;
   border: 2px solid #5cff8a;

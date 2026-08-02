@@ -111,7 +111,7 @@ export function updateHud(els: HudElements, snap: HudSnapshot): void {
   } else if (snap.phase === "won") {
     showOverlay(els, {
       title: "You win!",
-      body: `Dots left scored + time bonus (under 1 min).\nFinal score: ${snap.score} (bonus ${snap.timeBonus})`,
+      body: `Dots + gems + time bonus.\nFinal score: ${snap.score}\n(gems ${snap.bonusScore} · time ${snap.timeBonus})`,
       hint: "Press R to play again",
       variant: "default",
     });

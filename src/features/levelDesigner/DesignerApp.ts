@@ -159,6 +159,7 @@ export class DesignerApp {
       { key: "slimeSpeedFactor", label: "Slime speed ×", step: "0.05" },
       { key: "timeBonusLimitSeconds", label: "Time bonus limit", step: "1" },
       { key: "pointsPerDot", label: "Points per dot", step: "1" },
+      { key: "pointsPerBonus", label: "Points per bonus gem", step: "5" },
       { key: "maxTimeBonus", label: "Max time bonus", step: "10" },
     ];
     return fields

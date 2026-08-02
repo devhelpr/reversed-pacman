@@ -111,9 +111,9 @@ export class DesignerCanvas {
         ctx.fillStyle = "#0A0A1A";
         ctx.fillRect(x, y, CELL, CELL);
         ctx.fillStyle = brushColor(ch);
-        if (ch === "." || ch === "o") {
+        if (ch === "." || ch === "o" || ch === "*") {
           ctx.beginPath();
-          ctx.arc(x + CELL / 2, y + CELL / 2, ch === "o" ? 5 : 3, 0, Math.PI * 2);
+          ctx.arc(x + CELL / 2, y + CELL / 2, ch === "o" ? 5 : ch === "*" ? 5 : 3, 0, Math.PI * 2);
           ctx.fill();
         } else if (ch === " ") {
           // empty path — leave dark
