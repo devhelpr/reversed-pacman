@@ -20,6 +20,7 @@ export class GameSession {
   traps: TrapSystem;
   phase: GamePhase = "ready";
   elapsedSeconds = 0;
+  bonusCollected = 0;
   finalScore: ScoreBreakdown | null = null;
   loseReason: LoseReason = null;
 
@@ -37,6 +38,7 @@ export class GameSession {
   start(): void {
     this.phase = "playing";
     this.elapsedSeconds = 0;
+    this.bonusCollected = 0;
     this.finalScore = null;
     this.loseReason = null;
   }
@@ -51,6 +53,7 @@ export class GameSession {
     this.traps = new TrapSystem(this.level, parsed.trapdoorPositions);
     this.phase = "ready";
     this.elapsedSeconds = 0;
+    this.bonusCollected = 0;
     this.finalScore = null;
     this.loseReason = null;
   }
@@ -80,6 +83,9 @@ export class GameSession {
     const arrived = this.player.tick(dt, this.maze);
 
     const hazard = this.traps.resolvePlayerTile(this.player, this.maze, arrived);
+    if (this.maze.eatBonus(this.player.col, this.player.row)) {
+      this.bonusCollected += 1;
+    }
     if (hazard === "trapdoor") {
       this.player.beginFall(this.level.trapdoorFallDurationSeconds);
       return;
@@ -116,11 +122,7 @@ export class GameSession {
 
       if (atExit) {
         this.phase = "won";
-        this.finalScore = computeScore(
-          this.maze.getDotsRemaining(),
-          this.elapsedSeconds,
-          this.level,
-        );
+        this.finalScore = this.scoreNow();
       }
     }
   }
@@ -166,8 +168,7 @@ export class GameSession {
 
   getHud(): HudSnapshot {
     const ghostsRemaining = this.ghosts.filter((g) => g.alive).length;
-    const preview = computeScore(this.maze.getDotsRemaining(), this.elapsedSeconds, this.level);
-    const score = this.finalScore ?? preview;
+    const score = this.finalScore ?? this.scoreNow();
 
     return {
       phase: this.phase,
@@ -176,6 +177,8 @@ export class GameSession {
       elapsedSeconds: this.elapsedSeconds,
       score: score.total,
       timeBonus: score.timeBonus,
+      bonusScore: score.bonusScore,
+      bonusCollected: score.bonusCollected,
       levelName: this.level.name,
       allGhostsCaught: ghostsRemaining === 0,
       baitRemaining: this.player.baitRemaining,
@@ -183,10 +186,19 @@ export class GameSession {
     };
   }
 
+  private scoreNow(): ScoreBreakdown {
+    return computeScore(
+      this.maze.getDotsRemaining(),
+      this.elapsedSeconds,
+      this.level,
+      this.bonusCollected,
+    );
+  }
+
   private fail(reason: LoseReason): void {
     this.phase = "lost";
     this.loseReason = reason;
     this.player.kill();
-    this.finalScore = computeScore(this.maze.getDotsRemaining(), this.elapsedSeconds, this.level);
+    this.finalScore = this.scoreNow();
   }
 }

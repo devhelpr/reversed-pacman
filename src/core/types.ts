@@ -21,7 +21,8 @@ export type TileKind =
   | "trapdoor" // timed pit
   | "slime" // slows the player
   | "shock" // timed electric plate
-  | "rift"; // paired teleporter
+  | "rift" // paired teleporter
+  | "bonus"; // player-collectible score gem
 
 export type GamePhase = "ready" | "playing" | "won" | "lost" | "paused";
 

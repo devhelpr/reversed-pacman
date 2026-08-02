@@ -27,6 +27,12 @@ export const LEGEND_ITEMS: LegendItem[] = [
     detail: "Score when left — you cannot eat these",
   },
   {
+    id: "bonus",
+    swatchClass: "swatch-bonus",
+    label: "Bonus gem",
+    detail: "You collect these for extra score",
+  },
+  {
     id: "bait",
     swatchClass: "swatch-bait",
     label: "Blue bait",
@@ -49,6 +55,12 @@ export const LEGEND_ITEMS: LegendItem[] = [
     swatchClass: "swatch-shock",
     label: "Shock plate",
     detail: "Periodically live — standing on it kills",
+  },
+  {
+    id: "rift",
+    swatchClass: "swatch-rift",
+    label: "Rift",
+    detail: "Teleports you to the paired rift",
   },
   {
     id: "exit",

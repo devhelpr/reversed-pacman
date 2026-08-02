@@ -11,6 +11,7 @@ const WALKABLE: ReadonlySet<TileKind> = new Set([
   "slime",
   "shock",
   "rift",
+  "bonus",
 ]);
 
 /**
@@ -70,6 +71,10 @@ export class Maze {
     return this.getTile(col, row) === "bait";
   }
 
+  hasBonus(col: number, row: number): boolean {
+    return this.getTile(col, row) === "bonus";
+  }
+
   /** Remove a scoreable yellow dot if present. */
   eatDot(col: number, row: number): boolean {
     if (!this.hasDot(col, row)) return false;
@@ -81,6 +86,13 @@ export class Maze {
   /** Player eats a blue bait pellet. */
   eatBait(col: number, row: number): boolean {
     if (!this.hasBait(col, row)) return false;
+    this.tiles[row]![col] = "path";
+    return true;
+  }
+
+  /** Player collects a bonus gem. */
+  eatBonus(col: number, row: number): boolean {
+    if (!this.hasBonus(col, row)) return false;
     this.tiles[row]![col] = "path";
     return true;
   }

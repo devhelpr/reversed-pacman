@@ -3,13 +3,14 @@ import { registerLevel } from "./LevelRegistry";
 
 /**
  * Easier starter maze — fewer ghosts & traps, more breathing room.
- * Chars: # wall . dot o bait T trapdoor ~ slime Z shock @ rift P/G/E
+ * Chars: # wall . dot o bait * bonus T trapdoor ~ slime Z shock @ rift P/G/E
  */
 export const level1: LevelDefinition = {
   id: "level-1",
   name: "Neon Alley",
   timeBonusLimitSeconds: 90,
   pointsPerDot: 10,
+  pointsPerBonus: 50,
   maxTimeBonus: 1000,
   playerSpeed: 5.8,
   ghostSpeed: 2.35,
@@ -37,13 +38,13 @@ export const level1: LevelDefinition = {
     "#####.#.#####.#.#####",
     "#####.#.......#.#####",
     "#####.#.#####.#.#####",
-    "#....o....#.........#",
+    "#....o....#....*....#",
     "#.###.###.#.###.###.#",
     "#...#.....P.....#..E#",
     "###.#.#.#####.#.#.###",
     "#..~..#...#...#..T..#",
     "#.#######.#.#######.#",
-    "#....Z..............#",
+    "#....Z........*.....#",
     "#####################",
   ],
 };

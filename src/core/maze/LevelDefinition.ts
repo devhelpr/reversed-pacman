@@ -12,7 +12,8 @@ export type MazeChar =
   | "T" // trap door
   | "~" // sticky slime
   | "Z" // shock plate
-  | "@"; // rift teleporter (paired in order)
+  | "@" // rift teleporter (paired in order)
+  | "*"; // bonus gem (player collects for score)
 
 export interface LevelDefinition {
   id: string;
@@ -23,6 +24,8 @@ export interface LevelDefinition {
   timeBonusLimitSeconds: number;
   /** Points per remaining dot at win. */
   pointsPerDot: number;
+  /** Points awarded per bonus gem the player collects. */
+  pointsPerBonus: number;
   /** Max time-bonus points when finishing instantly. */
   maxTimeBonus: number;
   /** Player tiles-per-second. */
@@ -64,6 +67,7 @@ export interface ParsedMaze {
   slimePositions: GridPos[];
   shockPositions: GridPos[];
   riftPositions: GridPos[];
+  bonusPositions: GridPos[];
 }
 
 export function parseMaze(layout: string[]): ParsedMaze {
@@ -90,6 +94,7 @@ export function parseMaze(layout: string[]): ParsedMaze {
   const slimePositions: GridPos[] = [];
   const shockPositions: GridPos[] = [];
   const riftPositions: GridPos[] = [];
+  const bonusPositions: GridPos[] = [];
 
   for (let row = 0; row < height; row++) {
     const line = layout[row]!;
@@ -139,6 +144,10 @@ export function parseMaze(layout: string[]): ParsedMaze {
           tiles[row]![col] = "rift";
           riftPositions.push({ col, row });
           break;
+        case "*":
+          tiles[row]![col] = "bonus";
+          bonusPositions.push({ col, row });
+          break;
         default: {
           const unknown: string = ch;
           throw new Error(`Unknown maze character "${unknown}" at ${col},${row}`);
@@ -167,5 +176,6 @@ export function parseMaze(layout: string[]): ParsedMaze {
     slimePositions,
     shockPositions,
     riftPositions,
+    bonusPositions,
   };
 }

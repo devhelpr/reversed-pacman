@@ -4,6 +4,9 @@ export interface ScoreBreakdown {
   dotsRemaining: number;
   pointsPerDot: number;
   dotScore: number;
+  bonusCollected: number;
+  pointsPerBonus: number;
+  bonusScore: number;
   elapsedSeconds: number;
   timeBonusLimitSeconds: number;
   timeBonus: number;
@@ -11,15 +14,18 @@ export interface ScoreBreakdown {
 }
 
 /**
- * Score = remaining dots × pointsPerDot + time bonus under the limit.
- * Time bonus scales linearly from maxTimeBonus at t=0 to 0 at the limit.
+ * Score = remaining dots × pointsPerDot
+ *       + collected bonus gems × pointsPerBonus
+ *       + time bonus under the limit.
  */
 export function computeScore(
   dotsRemaining: number,
   elapsedSeconds: number,
   level: LevelDefinition,
+  bonusCollected = 0,
 ): ScoreBreakdown {
   const dotScore = dotsRemaining * level.pointsPerDot;
+  const bonusScore = bonusCollected * level.pointsPerBonus;
 
   let timeBonus = 0;
   if (elapsedSeconds <= level.timeBonusLimitSeconds) {
@@ -31,9 +37,12 @@ export function computeScore(
     dotsRemaining,
     pointsPerDot: level.pointsPerDot,
     dotScore,
+    bonusCollected,
+    pointsPerBonus: level.pointsPerBonus,
+    bonusScore,
     elapsedSeconds,
     timeBonusLimitSeconds: level.timeBonusLimitSeconds,
     timeBonus,
-    total: dotScore + timeBonus,
+    total: dotScore + bonusScore + timeBonus,
   };
 }

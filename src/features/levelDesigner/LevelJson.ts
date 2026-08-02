@@ -12,6 +12,7 @@ export function defaultLevelParams(): Omit<LevelDefinition, "id" | "name" | "lay
   return {
     timeBonusLimitSeconds: 90,
     pointsPerDot: 10,
+    pointsPerBonus: 50,
     maxTimeBonus: 1000,
     playerSpeed: 5.8,
     ghostSpeed: 2.35,
@@ -173,6 +174,7 @@ function coerceLevel(value: unknown, label: string): LevelDefinition {
     layout: v.layout as string[],
     timeBonusLimitSeconds: num(v.timeBonusLimitSeconds, defaults.timeBonusLimitSeconds),
     pointsPerDot: num(v.pointsPerDot, defaults.pointsPerDot),
+    pointsPerBonus: num(v.pointsPerBonus, defaults.pointsPerBonus),
     maxTimeBonus: num(v.maxTimeBonus, defaults.maxTimeBonus),
     playerSpeed: num(v.playerSpeed, defaults.playerSpeed),
     ghostSpeed: num(v.ghostSpeed, defaults.ghostSpeed),

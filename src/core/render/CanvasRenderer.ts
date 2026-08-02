@@ -2,6 +2,7 @@ import type { Maze } from "../maze/Maze";
 import type { Direction, GamePhase, LoseReason, Vec2 } from "../types";
 import {
   createBaitSprite,
+  createBonusSprite,
   createDotSprite,
   createExitSprite,
   createGhostSprites,
@@ -38,6 +39,8 @@ export interface HudSnapshot {
   elapsedSeconds: number;
   score: number;
   timeBonus: number;
+  bonusScore: number;
+  bonusCollected: number;
   levelName: string;
   allGhostsCaught: boolean;
   baitRemaining: number;
@@ -75,6 +78,7 @@ export class CanvasRenderer {
   private readonly dotSprite: HTMLCanvasElement;
   private readonly wallSprite: HTMLCanvasElement;
   private readonly baitSprites: HTMLCanvasElement[];
+  private readonly bonusSprites: HTMLCanvasElement[];
   private readonly trapdoorClosed: HTMLCanvasElement;
   private readonly trapdoorOpen: HTMLCanvasElement;
   private readonly slimeSprites: HTMLCanvasElement[];
@@ -103,6 +107,7 @@ export class CanvasRenderer {
     this.wallSprite = createWallPattern();
     this.exitSprites = [createExitSprite(0), createExitSprite(1)];
     this.baitSprites = [createBaitSprite(0), createBaitSprite(1)];
+    this.bonusSprites = [createBonusSprite(0), createBonusSprite(1)];
     this.trapdoorClosed = createTrapdoorSprite(false);
     this.trapdoorOpen = createTrapdoorSprite(true);
     this.slimeSprites = [createSlimeSprite(0), createSlimeSprite(1)];
@@ -167,6 +172,13 @@ export class CanvasRenderer {
           case "bait":
             ctx.drawImage(
               this.baitSprites[anim % this.baitSprites.length]!,
+              x + (tw - 8) / 2,
+              y + (tw - 8) / 2,
+            );
+            break;
+          case "bonus":
+            ctx.drawImage(
+              this.bonusSprites[anim % this.bonusSprites.length]!,
               x + (tw - 8) / 2,
               y + (tw - 8) / 2,
             );

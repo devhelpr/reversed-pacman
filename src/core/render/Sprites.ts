@@ -549,6 +549,23 @@ export function createRiftSprite(frame: number): HTMLCanvasElement {
   return bakeSprite(grid);
 }
 
+export function createBonusSprite(frame: number): HTMLCanvasElement {
+  const A = frame % 2 === 0 ? "#FFD24A" : "#FFE58A";
+  const B = frame % 2 === 0 ? "#FF9E1A" : "#FFD24A";
+  const C = "#FFF6C8";
+  const grid: PixelGrid = [
+    [null, null, null, A, A, null, null, null],
+    [null, null, A, C, C, A, null, null],
+    [null, A, C, A, A, C, A, null],
+    [A, C, A, B, B, A, C, A],
+    [A, C, A, B, B, A, C, A],
+    [null, A, C, A, A, C, A, null],
+    [null, null, A, C, C, A, null, null],
+    [null, null, null, A, A, null, null, null],
+  ];
+  return bakeSprite(grid);
+}
+
 /** Angry hunter look used while bait is active. */
 export const HUNTER_GHOST_PALETTE: GhostPalette = {
   body: "#E8E8FF",
