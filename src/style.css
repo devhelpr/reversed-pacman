@@ -281,6 +281,32 @@ body {
   min-height: 1.3em;
 }
 
+/* Fixed overlay — does not affect document flow / layout */
+.bait-banner {
+  position: fixed;
+  left: 50%;
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  z-index: 15;
+  transform: translateX(-50%);
+  width: min(520px, calc(100% - 1.5rem));
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  text-align: center;
+  font-family: var(--pixel);
+  font-size: 0.55rem;
+  letter-spacing: 0.04em;
+  line-height: 1.45;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--danger) 28%, var(--bg-2));
+  border: 2px solid var(--danger);
+  box-shadow: 4px 4px 0 #0a0806;
+  pointer-events: none;
+}
+
+.bait-banner.hidden {
+  display: none;
+}
+
 .canvas-wrap {
   position: relative;
   display: grid;
@@ -589,17 +615,13 @@ body {
 
   .objective {
     display: none;
-    margin: 0;
-    padding: 0.35rem 0.5rem;
-    font-size: 0.95rem;
-    min-height: 0;
-    text-align: center;
-    background: color-mix(in srgb, var(--danger) 22%, var(--bg-2));
-    border: 2px solid var(--danger);
   }
 
-  .objective.is-bait {
-    display: block;
+  /* Sit above the on-screen D-pad so it never covers controls */
+  .bait-banner {
+    bottom: calc(10.5rem + env(safe-area-inset-bottom, 0px));
+    font-size: 0.5rem;
+    padding: 0.45rem 0.6rem;
   }
 
   .legend-mount {

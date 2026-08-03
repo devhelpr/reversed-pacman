@@ -17,6 +17,7 @@ export interface HudElements {
   time: HTMLElement;
   score: HTMLElement;
   objective: HTMLElement;
+  baitBanner: HTMLElement;
   overlay: HTMLElement;
   overlayCard: HTMLElement;
   overlayTitle: HTMLElement;
@@ -54,6 +55,7 @@ export function createHud(parent: HTMLElement): HudElements {
       </div>
     </header>
     <p data-hud="objective" class="objective"></p>
+    <p data-hud="bait-banner" class="bait-banner hidden" role="status" aria-live="polite"></p>
     <div data-hud="overlay" class="overlay hidden">
       <div data-hud="overlay-card" class="overlay-card">
         <h2 data-hud="overlay-title"></h2>
@@ -75,6 +77,7 @@ export function createHud(parent: HTMLElement): HudElements {
     time: q('[data-hud="time"]'),
     score: q('[data-hud="score"]'),
     objective: q('[data-hud="objective"]'),
+    baitBanner: q('[data-hud="bait-banner"]'),
     overlay: q('[data-hud="overlay"]'),
     overlayCard: q('[data-hud="overlay-card"]'),
     overlayTitle: q('[data-hud="overlay-title"]'),
@@ -105,26 +108,29 @@ export function updateHud(
   els.score.textContent = String(snap.score);
 
   if (snap.baitRemaining > 0) {
-    els.objective.textContent = `BAIT ACTIVE — humans hunting! (${snap.baitRemaining.toFixed(1)}s)`;
-    els.objective.classList.add("is-bait");
-  } else if (!snap.allGhostsCaught) {
+    els.baitBanner.textContent = `BAIT ACTIVE — humans hunting! (${snap.baitRemaining.toFixed(1)}s)`;
+    els.baitBanner.classList.remove("hidden");
+  } else {
+    els.baitBanner.textContent = "";
+    els.baitBanner.classList.add("hidden");
+  }
+
+  if (!snap.allGhostsCaught) {
     els.objective.textContent =
       snap.floorCount > 1
-        ? "Chase humans across floors. Lifts (^/v) are one-way — bait flips the hunt briefly."
-        : "Chase humans, avoid traps. Blue bait flips the hunt — briefly.";
-    els.objective.classList.remove("is-bait");
+        ? "Catch humans before they clear every dot. Lifts (^/v) are one-way — bait flips the hunt."
+        : "Catch humans before they clear every dot. Blue bait flips the hunt — briefly.";
   } else {
     els.objective.textContent =
       snap.floorCount > 1
         ? "All humans caught! Use lifts if needed, then reach the glowing exit."
         : "All humans caught! Reach the glowing exit to finish.";
-    els.objective.classList.remove("is-bait");
   }
 
   if (snap.phase === "ready") {
     showOverlay(els, {
       title: "Ready?",
-      body: "Catch the humans, then reach the green exit.\nTap ⓘ for tile info.",
+      body: "Catch the humans before they eat every dot, then reach the green exit.\nTap ⓘ for tile info.",
       cta: "Tap here · swipe · or pad to start",
       hint: "ⓘ pause & info · R restart",
       variant: "start",
@@ -177,7 +183,7 @@ function loseCopy(reason: HudSnapshot["loseReason"]): { title: string; body: str
     default:
       return {
         title: "Dots gone!",
-        body: "The humans ate everything.",
+        body: "The humans cleared the maze.\nCatch them before they finish every scrap.",
       };
   }
 }

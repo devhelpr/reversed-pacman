@@ -214,7 +214,12 @@ export class GameApp {
     const snap = this.session.getHud();
     const objective = this.mount.querySelector("[data-el='info-objective']");
     const stats = this.mount.querySelector("[data-el='info-stats']");
-    if (objective) objective.textContent = this.hud.objective.textContent;
+    if (objective) {
+      const baitActive = !this.hud.baitBanner.classList.contains("hidden");
+      objective.textContent = baitActive
+        ? this.hud.baitBanner.textContent
+        : this.hud.objective.textContent;
+    }
     if (stats) {
       stats.innerHTML = `
         <div class="hud-group"><span class="hud-label">Level</span><span class="hud-value">${escapeHtml(snap.levelName)}</span></div>
