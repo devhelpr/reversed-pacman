@@ -20,6 +20,7 @@ export interface HudElements {
   baitBanner: HTMLElement;
   overlay: HTMLDialogElement;
   overlayCard: HTMLElement;
+  overlayLogo: HTMLElement;
   overlayTitle: HTMLElement;
   overlayBody: HTMLElement;
   overlayHint: HTMLElement;
@@ -58,6 +59,7 @@ export function createHud(parent: HTMLElement): HudElements {
     <p data-hud="bait-banner" class="bait-banner hidden" role="status" aria-live="polite"></p>
     <dialog data-hud="overlay" class="overlay">
       <div data-hud="overlay-card" class="overlay-card">
+        <p data-hud="overlay-logo" class="overlay-logo hidden">Maze Chase</p>
         <h2 data-hud="overlay-title"></h2>
         <p data-hud="overlay-body"></p>
         <p data-hud="overlay-cta" class="overlay-cta hidden"></p>
@@ -80,6 +82,7 @@ export function createHud(parent: HTMLElement): HudElements {
     baitBanner: q('[data-hud="bait-banner"]'),
     overlay: q('[data-hud="overlay"]') as HTMLDialogElement,
     overlayCard: q('[data-hud="overlay-card"]'),
+    overlayLogo: q('[data-hud="overlay-logo"]'),
     overlayTitle: q('[data-hud="overlay-title"]'),
     overlayBody: q('[data-hud="overlay-body"]'),
     overlayHint: q('[data-hud="overlay-hint"]'),
@@ -200,6 +203,7 @@ interface OverlayContent {
 
 function showOverlay(els: HudElements, content: OverlayContent): void {
   els.overlayCard.classList.toggle("overlay-card--start", content.variant === "start");
+  els.overlayLogo.classList.toggle("hidden", content.variant !== "start");
   els.overlayTitle.textContent = content.title;
   els.overlayBody.textContent = content.body;
   els.overlayHint.textContent = content.hint;
@@ -222,4 +226,5 @@ function hideOverlay(els: HudElements): void {
     els.overlay.close();
   }
   els.overlayCard.classList.remove("overlay-card--start");
+  els.overlayLogo.classList.add("hidden");
 }

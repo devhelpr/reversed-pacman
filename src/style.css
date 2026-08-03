@@ -740,6 +740,22 @@ kbd {
   box-shadow: 6px 6px 0 #062814;
 }
 
+.overlay-logo {
+  margin: 0 0 0.85rem;
+  font-family: var(--display);
+  font-size: clamp(1.15rem, 5vw, 1.65rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-shadow:
+    3px 3px 0 #0a0806,
+    -1px 0 0 #3dffb544;
+}
+
+.overlay-logo.hidden {
+  display: none;
+}
+
 .overlay-card h2 {
   margin: 0 0 0.75rem;
   font-family: var(--display);
@@ -751,6 +767,7 @@ kbd {
 
 .overlay-card--start h2 {
   color: var(--accent-2);
+  font-size: 0.85rem;
 }
 
 .overlay-card p {
