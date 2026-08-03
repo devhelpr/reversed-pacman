@@ -48,7 +48,7 @@ export interface LevelDefinition {
   playerSpeed: number;
   /** Ghost tiles-per-second. */
   ghostSpeed: number;
-  /** How often (seconds) a ghost eats a dot while standing on one. */
+  /** @deprecated Humans eat every dotted tile they enter; kept for level JSON compatibility. */
   ghostEatIntervalSeconds: number;
   /** How long bait makes ghosts hunt the player. */
   baitDurationSeconds: number;

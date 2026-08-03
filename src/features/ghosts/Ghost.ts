@@ -8,7 +8,7 @@ import { manhattan } from "../traps/TrapSystem";
 export type GhostMood = "forage" | "hunt";
 
 /**
- * Ghost that forages for dots on its floor, or hunts the player when bait is active
+ * Human runner that forages for dots on its floor, or hunts the player when bait is active
  * and the player shares that floor.
  */
 export class Ghost extends MovableEntity {
@@ -17,15 +17,11 @@ export class Ghost extends MovableEntity {
   animTimer = 0;
   animFrame = 0;
   mood: GhostMood = "forage";
-  private eatCooldown: number;
-  private readonly eatInterval: number;
 
-  constructor(start: FloorPos, speed: number, index: number, eatIntervalSeconds: number) {
+  constructor(start: FloorPos, speed: number, index: number, _eatIntervalSeconds: number) {
     super(start, speed);
     this.index = index;
     this.baseSpeed = speed;
-    this.eatInterval = eatIntervalSeconds;
-    this.eatCooldown = eatIntervalSeconds * ((index % 4) / 4);
   }
 
   tick(
@@ -40,7 +36,12 @@ export class Ghost extends MovableEntity {
     this.mood = huntingHere ? "hunt" : "forage";
     this.speed = this.baseSpeed * (this.mood === "hunt" ? huntSpeedMultiplier : 1);
 
-    const target = huntingHere ? huntTarget : null;
+    // Eat before moving so a dotted tile isn't skipped when leaving it.
+    if (this.mood === "forage") {
+      maze.eatDot(this.floor, this.col, this.row);
+    }
+
+    const target = huntingHere ? huntTarget : this.nearestDot(maze);
 
     if (this.direction === "none") {
       this.pickNewDirection(maze, target);
@@ -52,18 +53,14 @@ export class Ghost extends MovableEntity {
       this.pickNewDirection(maze, target);
     }
 
+    if (arrived && this.mood === "forage") {
+      maze.eatDot(this.floor, this.col, this.row);
+    }
+
     this.animTimer += dt;
     if (this.animTimer >= 0.18) {
       this.animTimer = 0;
       this.animFrame = (this.animFrame + 1) % 2;
-    }
-
-    if (this.mood === "forage") {
-      this.eatCooldown -= dt;
-      if (this.eatCooldown <= 0 && maze.hasDot(this.floor, this.col, this.row)) {
-        maze.eatDot(this.floor, this.col, this.row);
-        this.eatCooldown = this.eatInterval;
-      }
     }
   }
 
@@ -74,7 +71,30 @@ export class Ghost extends MovableEntity {
     this.mood = "forage";
   }
 
-  private pickNewDirection(maze: Maze, huntTarget: GridPos | null): void {
+  private nearestDot(maze: Maze): GridPos | null {
+    const tiles = maze.snapshotTiles(this.floor);
+    let best: GridPos | null = null;
+    let bestScore = Number.POSITIVE_INFINITY;
+
+    for (let row = 0; row < tiles.length; row++) {
+      const line = tiles[row]!;
+      for (let col = 0; col < line.length; col++) {
+        if (line[col] !== "dot") continue;
+        const dist = manhattan({ col, row }, this.gridPos);
+        // Spread hunters so they don't all lock the same pellet.
+        const jitter = ((col * 13 + row * 7 + this.index * 31) % 11) * 0.05;
+        const score = dist + jitter;
+        if (score < bestScore) {
+          bestScore = score;
+          best = { col, row };
+        }
+      }
+    }
+
+    return best;
+  }
+
+  private pickNewDirection(maze: Maze, seekTarget: GridPos | null): void {
     const options = maze.walkableDirections(this.floor, this.gridPos);
     if (options.length === 0) {
       this.direction = "none";
@@ -88,14 +108,14 @@ export class Ghost extends MovableEntity {
       if (choices.length === 0) choices = options;
     }
 
-    if (huntTarget) {
+    if (seekTarget) {
       let best: Exclude<Direction, "none"> = choices[0] as Exclude<Direction, "none">;
       let bestScore = Number.POSITIVE_INFINITY;
       for (const dir of choices) {
         if (dir === "none") continue;
         const v = DIRECTION_VECTORS[dir];
         const next = { col: this.col + v.x, row: this.row + v.y };
-        const score = manhattan(next, huntTarget);
+        const score = manhattan(next, seekTarget);
         const jitter = ((this.index * 17 + dir.charCodeAt(0)) % 5) * 0.01;
         if (score + jitter < bestScore) {
           bestScore = score + jitter;
@@ -107,13 +127,7 @@ export class Ghost extends MovableEntity {
       return;
     }
 
-    const withDots = choices.filter((d) => {
-      const n = maze.neighbor(this.floor, this.gridPos, d);
-      return n !== null && maze.hasDot(this.floor, n.col, n.row);
-    });
-
-    const pool = withDots.length > 0 ? withDots : choices;
-    const pick = pool[Math.floor(Math.random() * pool.length)] as Direction;
+    const pick = choices[Math.floor(Math.random() * choices.length)] as Direction;
     this.direction = pick;
     this.nextDirection = pick;
   }
