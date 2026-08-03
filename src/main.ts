@@ -10,7 +10,8 @@ function lockMobileViewportZoom(): void {
   let lastTouchEnd = 0;
 
   const isEditable = (target: EventTarget | null) =>
-    target instanceof Element && Boolean(target.closest("input, textarea, select, [contenteditable=true]"));
+    target instanceof Element &&
+    Boolean(target.closest("input, textarea, select, [contenteditable=true]"));
 
   document.addEventListener(
     "touchend",
