@@ -281,7 +281,7 @@ body {
   min-height: 1.3em;
 }
 
-/* Fixed overlay — does not affect document flow / layout */
+/* Fixed on desktop; on mobile anchored above the D-pad via .touch-dock */
 .bait-banner {
   position: fixed;
   left: 50%;
@@ -305,6 +305,10 @@ body {
 
 .bait-banner.hidden {
   display: none;
+}
+
+.touch-dock {
+  position: relative;
 }
 
 .canvas-wrap {
@@ -623,9 +627,12 @@ body {
     display: none;
   }
 
-  /* Sit above the on-screen D-pad so it never covers controls */
+  /* Anchor just above the D-pad — never covers controls, no layout shift */
   .bait-banner {
-    bottom: calc(10.5rem + env(safe-area-inset-bottom, 0px));
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    margin-bottom: 0.4rem;
     font-size: 0.5rem;
     padding: 0.45rem 0.6rem;
   }

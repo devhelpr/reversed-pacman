@@ -72,7 +72,9 @@ export class GameApp {
           </div>
           <div class="legend-mount"></div>
         </div>
-        <div data-el="touch-mount" class="touch-mount"></div>
+        <div data-el="touch-dock" class="touch-dock">
+          <div data-el="touch-mount" class="touch-mount"></div>
+        </div>
         <footer class="controls-help desktop-chrome">
           <span class="help-desktop"><kbd>←↑↓→</kbd> / <kbd>WASD</kbd> move</span>
           <span class="help-desktop"><kbd>P</kbd> pause</span>
@@ -109,11 +111,14 @@ export class GameApp {
     const canvas = this.mount.querySelector("#game-canvas") as HTMLCanvasElement;
     const hudMount = this.mount.querySelector(".hud-mount") as HTMLElement;
     const legendMount = this.mount.querySelector(".legend-mount") as HTMLElement;
+    const touchDock = this.mount.querySelector("[data-el='touch-dock']") as HTMLElement;
     const touchMount = this.mount.querySelector("[data-el='touch-mount']") as HTMLElement;
     const swipeTarget = this.mount.querySelector("[data-el='swipe-target']") as HTMLElement;
     this.hud = createHud(hudMount);
     createLegend(legendMount);
     this.renderer = new CanvasRenderer(canvas);
+    // Keep bait above the D-pad without covering it or shifting layout.
+    touchDock.insertBefore(this.hud.baitBanner, touchMount);
 
     const level = options.level ?? (options.levelId ? getLevel(options.levelId) : getFirstLevel());
     this.session = new GameSession(level);
