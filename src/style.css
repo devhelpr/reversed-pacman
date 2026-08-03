@@ -281,7 +281,7 @@ body {
   min-height: 1.3em;
 }
 
-/* Fixed on desktop; on mobile anchored above the D-pad via .touch-dock */
+/* Fixed to the viewport bottom — does not affect document flow / layout */
 .bait-banner {
   position: fixed;
   left: 50%;
@@ -305,10 +305,6 @@ body {
 
 .bait-banner.hidden {
   display: none;
-}
-
-.touch-dock {
-  position: relative;
 }
 
 .canvas-wrap {
@@ -627,12 +623,9 @@ body {
     display: none;
   }
 
-  /* Anchor just above the D-pad — never covers controls, no layout shift */
+  /* Sit above the on-screen D-pad at the bottom of the viewport */
   .bait-banner {
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    margin-bottom: 0.4rem;
+    bottom: calc(10.5rem + env(safe-area-inset-bottom, 0px));
     font-size: 0.5rem;
     padding: 0.45rem 0.6rem;
   }
