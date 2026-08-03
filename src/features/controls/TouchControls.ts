@@ -23,18 +23,12 @@ export class TouchControls {
   attach(): () => void {
     this.root.innerHTML = `
       <div class="touch-controls" aria-label="Touch controls">
-        <div class="touch-actions">
-          <button type="button" class="touch-btn" data-touch="start">Start</button>
-          <button type="button" class="touch-btn" data-touch="pause">Pause</button>
-          <button type="button" class="touch-btn" data-touch="restart">Restart</button>
-        </div>
         <div class="touch-dpad" role="group" aria-label="Direction pad">
           <button type="button" class="touch-pad touch-pad-up" data-dir="up" aria-label="Up">▲</button>
           <button type="button" class="touch-pad touch-pad-left" data-dir="left" aria-label="Left">◀</button>
           <button type="button" class="touch-pad touch-pad-right" data-dir="right" aria-label="Right">▶</button>
           <button type="button" class="touch-pad touch-pad-down" data-dir="down" aria-label="Down">▼</button>
         </div>
-        <p class="touch-hint">Swipe the maze or use the pad</p>
       </div>
     `;
 
@@ -56,22 +50,6 @@ export class TouchControls {
         btn.removeEventListener("pointerleave", release);
         btn.removeEventListener("pointercancel", release);
       });
-    });
-
-    const actionMap: Record<string, () => void> = {
-      start: () => this.input.requestStart(),
-      pause: () => this.input.requestPause(),
-      restart: () => this.input.requestRestart(),
-    };
-
-    this.root.querySelectorAll<HTMLButtonElement>("[data-touch]").forEach((btn) => {
-      const action = btn.dataset.touch!;
-      const onClick = (event: Event) => {
-        event.preventDefault();
-        actionMap[action]?.();
-      };
-      btn.addEventListener("click", onClick);
-      this.cleanups.push(() => btn.removeEventListener("click", onClick));
     });
 
     this.attachSwipe();

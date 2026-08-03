@@ -343,43 +343,162 @@ body {
   -webkit-user-select: none;
 }
 
-.touch-controls {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.75rem 1rem;
-  align-items: center;
-  padding: 0.65rem 0.5rem;
-  background: color-mix(in srgb, var(--bg-2) 90%, black);
-  border: 3px solid var(--line);
-  box-shadow: 4px 4px 0 #0a0806;
+.mobile-topbar {
+  display: none;
 }
 
-.touch-actions {
+.info-btn {
+  font-family: var(--pixel);
+  font-size: 1rem;
+  line-height: 1;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  color: var(--accent);
+  background: #1c1814;
+  border: 2px solid #6a5a48;
+  box-shadow: 2px 2px 0 #0a0806;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.info-btn:active,
+.info-btn[aria-expanded="true"] {
+  border-color: var(--accent);
+  background: #2a241c;
+  box-shadow: 1px 1px 0 #0a0806;
+  transform: translate(1px, 1px);
+}
+
+.info-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: end center;
+  background: #14110ecc;
+  padding: 0;
+}
+
+.info-sheet.hidden {
+  display: none;
+}
+
+.info-sheet-card {
+  width: min(480px, 100%);
+  max-height: min(92svh, 100%);
+  overflow: auto;
+  padding: 1rem 0.9rem 1.25rem;
+  background: linear-gradient(160deg, #2a241c, #1c1814);
+  border: 3px solid var(--accent);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -6px 0 #0a0806;
+}
+
+.info-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.info-sheet-header h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 0.85rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.info-close {
+  font-family: var(--pixel);
+  font-size: 0.7rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  color: var(--ink);
+  background: #1c1814;
+  border: 2px solid #6a5a48;
+  box-shadow: 2px 2px 0 #0a0806;
+  cursor: pointer;
+}
+
+.info-objective {
+  margin: 0 0 0.75rem;
+  color: var(--accent-2);
+  font-size: 1.05rem;
+}
+
+.info-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem 0.65rem;
+  margin-bottom: 0.85rem;
+  padding: 0.55rem 0.65rem;
+  background: color-mix(in srgb, var(--bg-2) 90%, black);
+  border: 2px solid #6a5a48;
+}
+
+.info-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
+  margin-bottom: 0.75rem;
 }
 
-.touch-btn,
+.info-level {
+  margin-bottom: 0.55rem;
+}
+
+.info-designer {
+  width: 100%;
+  margin-bottom: 0.85rem;
+}
+
+.info-legend {
+  height: auto;
+  box-shadow: none;
+}
+
+.info-legend .legend-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem 0.65rem;
+}
+
+.touch-controls {
+  display: grid;
+  place-items: center;
+  padding: 0.35rem 0.25rem 0.15rem;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
 .touch-pad {
   font-family: var(--pixel);
-  font-size: 0.5rem;
+  font-size: 0.85rem;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--ink);
   background: #1c1814;
   border: 2px solid #6a5a48;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0.55rem 0.7rem;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 0;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   box-shadow: 2px 2px 0 #0a0806;
+  display: grid;
+  place-items: center;
 }
 
-.touch-btn:active,
 .touch-pad.active,
 .touch-pad:active {
   border-color: var(--accent);
@@ -391,10 +510,10 @@ body {
 
 .touch-dpad {
   display: grid;
-  grid-template-columns: 52px 52px 52px;
-  grid-template-rows: 52px 52px 52px;
+  grid-template-columns: 48px 48px 48px;
+  grid-template-rows: 48px 48px 48px;
   gap: 4px;
-  justify-self: end;
+  justify-content: center;
 }
 
 .touch-pad-up {
@@ -417,31 +536,70 @@ body {
   grid-row: 3;
 }
 
-.touch-pad {
-  display: grid;
-  place-items: center;
-  font-size: 0.85rem;
-  padding: 0;
-}
-
-.touch-hint {
-  grid-column: 1 / -1;
-  margin: 0;
-  font-size: 1rem;
-  color: var(--muted);
-}
-
 @media (pointer: coarse), (max-width: 860px) {
   .touch-mount {
     display: block;
   }
 
-  .help-desktop {
+  .desktop-chrome {
+    display: none !important;
+  }
+
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 2.5rem;
+  }
+
+  .mobile-logo {
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    font-family: var(--display);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-shadow: 2px 2px 0 #0a0806;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-score {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.05rem;
+    flex-shrink: 0;
+  }
+
+  .mobile-score .hud-label {
+    font-size: 0.45rem;
+  }
+
+  .mobile-score .hud-value {
+    font-size: 0.7rem;
+  }
+
+  .hud-bar {
     display: none;
   }
 
-  .help-touch {
-    display: inline;
+  .objective {
+    display: none;
+    margin: 0;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.95rem;
+    min-height: 0;
+    text-align: center;
+    background: color-mix(in srgb, var(--danger) 22%, var(--bg-2));
+    border: 2px solid var(--danger);
+  }
+
+  .objective.is-bait {
+    display: block;
   }
 
   .legend-mount {
@@ -452,21 +610,47 @@ body {
     grid-template-columns: 1fr;
   }
 
-  #app {
-    padding: 0.75rem 0.65rem 1.25rem;
-    align-items: start;
-  }
-
   .game-shell {
     width: 100%;
+    gap: 0.4rem;
+    min-height: calc(100svh - 1rem);
   }
 
-  .game-title h1 {
-    font-size: 0.95rem;
+  .canvas-wrap {
+    padding: 0.3rem;
+    border-width: 3px;
+    box-shadow:
+      0 0 0 1px #0a0806,
+      4px 4px 0 #0a0806;
   }
 
-  .tagline {
+  .canvas-wrap::after {
+    inset: 0.3rem;
+  }
+
+  #app {
+    padding: 0.4rem 0.45rem max(0.5rem, env(safe-area-inset-bottom));
+    align-items: stretch;
+    place-items: stretch;
+  }
+
+  .overlay-card {
+    padding: 1.15rem 1rem;
+  }
+
+  .overlay-card h2 {
     font-size: 1rem;
+  }
+
+  .overlay-cta {
+    font-size: 0.55rem;
+    margin-top: 0.85rem !important;
+    padding: 0.6rem 0.7rem;
+  }
+
+  .overlay-hint {
+    margin-top: 0.7rem !important;
+    font-size: 0.95rem;
   }
 }
 
@@ -921,5 +1105,23 @@ kbd {
 
   .legend-list {
     grid-template-columns: 1fr;
+  }
+
+  .info-legend .legend-list {
+    grid-template-columns: 1fr;
+  }
+
+  .info-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .touch-dpad {
+    grid-template-columns: 44px 44px 44px;
+    grid-template-rows: 44px 44px 44px;
+  }
+
+  .touch-pad {
+    min-height: 44px;
+    min-width: 44px;
   }
 }

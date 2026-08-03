@@ -84,7 +84,16 @@ export function createHud(parent: HTMLElement): HudElements {
   };
 }
 
-export function updateHud(els: HudElements, snap: HudSnapshot): void {
+export interface HudUpdateOptions {
+  /** When true, suppress the default pause overlay (e.g. info sheet is open). */
+  suppressPauseOverlay?: boolean;
+}
+
+export function updateHud(
+  els: HudElements,
+  snap: HudSnapshot,
+  options: HudUpdateOptions = {},
+): void {
   els.level.textContent = snap.levelName;
   els.floor.textContent =
     snap.floorCount > 1
@@ -96,32 +105,35 @@ export function updateHud(els: HudElements, snap: HudSnapshot): void {
   els.score.textContent = String(snap.score);
 
   if (snap.baitRemaining > 0) {
-    els.objective.textContent = `BAIT ACTIVE — humans are hunting you! (${snap.baitRemaining.toFixed(1)}s)`;
+    els.objective.textContent = `BAIT ACTIVE — humans hunting! (${snap.baitRemaining.toFixed(1)}s)`;
+    els.objective.classList.add("is-bait");
   } else if (!snap.allGhostsCaught) {
     els.objective.textContent =
       snap.floorCount > 1
         ? "Chase humans across floors. Lifts (^/v) are one-way — bait flips the hunt briefly."
         : "Chase humans, avoid traps. Blue bait flips the hunt — briefly.";
+    els.objective.classList.remove("is-bait");
   } else {
     els.objective.textContent =
       snap.floorCount > 1
         ? "All humans caught! Use lifts if needed, then reach the glowing exit."
         : "All humans caught! Reach the glowing exit to finish.";
+    els.objective.classList.remove("is-bait");
   }
 
   if (snap.phase === "ready") {
     showOverlay(els, {
       title: "Ready?",
-      body: "Catch the humans, then reach the green exit.\nUse the Legenda if a tile looks unfamiliar.",
-      cta: "Tap here · pad · swipe · or keyboard to start",
-      hint: "P / Pause · R / Restart",
+      body: "Catch the humans, then reach the green exit.\nTap ⓘ for tile info.",
+      cta: "Tap here · swipe · or pad to start",
+      hint: "ⓘ pause & info · R restart",
       variant: "start",
     });
-  } else if (snap.phase === "paused") {
+  } else if (snap.phase === "paused" && !options.suppressPauseOverlay) {
     showOverlay(els, {
       title: "Paused",
       body: "Take a breath — the dots can wait.",
-      hint: "Press P or Pause to continue",
+      hint: "Tap to continue · ⓘ for info",
       variant: "default",
     });
   } else if (snap.phase === "won") {

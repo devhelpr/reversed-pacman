@@ -10,7 +10,7 @@ import {
 } from "../levels";
 import { GameSession } from "./GameSession";
 import { createHud, updateHud, type HudElements } from "../hud/Hud";
-import { createLegend } from "../hud/Legend";
+import { createLegend, legendListHtml } from "../hud/Legend";
 import { TouchControls } from "../controls/TouchControls";
 
 export interface GameAppOptions {
@@ -34,6 +34,9 @@ export class GameApp {
   private readonly loop: GameLoop;
   private readonly onOpenDesigner?: () => void;
   private session: GameSession;
+  private infoOpen = false;
+  /** True when we paused the session specifically to open the info sheet. */
+  private pausedForInfo = false;
 
   constructor(options: GameAppOptions) {
     this.mount = options.mount;
@@ -41,7 +44,7 @@ export class GameApp {
 
     this.mount.innerHTML = `
       <div class="game-shell">
-        <div class="game-title-row">
+        <div class="game-title-row desktop-chrome">
           <div class="game-title">
             <h1>Maze Chase</h1>
             <p class="tagline">You are the robot. Hunt the humans before they clear the maze.</p>
@@ -54,6 +57,14 @@ export class GameApp {
             <button type="button" data-el="designer-btn" class="btn">Level Designer</button>
           </div>
         </div>
+        <div class="mobile-topbar" aria-label="Game status">
+          <h1 class="mobile-logo">Maze Chase</h1>
+          <div class="mobile-score">
+            <span class="hud-label">Score</span>
+            <span data-el="mobile-score" class="hud-value">0</span>
+          </div>
+          <button type="button" data-el="info-btn" class="info-btn" aria-label="Pause and show info" title="Info">ⓘ</button>
+        </div>
         <div class="hud-mount"></div>
         <div class="play-row">
           <div class="canvas-wrap" data-el="swipe-target">
@@ -62,12 +73,36 @@ export class GameApp {
           <div class="legend-mount"></div>
         </div>
         <div data-el="touch-mount" class="touch-mount"></div>
-        <footer class="controls-help">
+        <footer class="controls-help desktop-chrome">
           <span class="help-desktop"><kbd>←↑↓→</kbd> / <kbd>WASD</kbd> move</span>
           <span class="help-desktop"><kbd>P</kbd> pause</span>
           <span class="help-desktop"><kbd>R</kbd> restart</span>
-          <span class="help-touch">Swipe maze or use on-screen pad</span>
         </footer>
+        <div data-el="info-sheet" class="info-sheet hidden" role="dialog" aria-modal="true" aria-labelledby="info-sheet-title">
+          <div class="info-sheet-card">
+            <div class="info-sheet-header">
+              <h2 id="info-sheet-title">Info</h2>
+              <button type="button" data-el="info-close" class="info-close" aria-label="Close info">✕</button>
+            </div>
+            <p data-el="info-objective" class="info-objective"></p>
+            <div class="info-stats" data-el="info-stats"></div>
+            <div class="info-actions">
+              <button type="button" data-el="info-resume" class="btn btn-play">Resume</button>
+              <button type="button" data-el="info-restart" class="btn">Restart</button>
+            </div>
+            <label class="level-select-wrap info-level">
+              <span>Level</span>
+              <select data-el="info-level-select" aria-label="Select level"></select>
+            </label>
+            <button type="button" data-el="info-designer" class="btn info-designer">Level Designer</button>
+            <aside class="legend info-legend" aria-label="Legenda">
+              <h3 class="legend-title">Legenda</h3>
+              <ul class="legend-list">
+                ${legendListHtml()}
+              </ul>
+            </aside>
+          </div>
+        </div>
       </div>
     `;
 
@@ -83,7 +118,6 @@ export class GameApp {
     const level = options.level ?? (options.levelId ? getLevel(options.levelId) : getFirstLevel());
     this.session = new GameSession(level);
     this.populateLevelSelect(level.id);
-    this.fitCanvas();
 
     this.mount.querySelector("[data-el='level-select']")!.addEventListener("change", (e) => {
       const id = (e.target as HTMLSelectElement).value;
@@ -93,10 +127,12 @@ export class GameApp {
       this.onOpenDesigner?.();
     });
 
+    this.wireInfoSheet();
     this.detachInput = this.input.attach();
     const touch = new TouchControls(this.input, touchMount, swipeTarget);
     this.detachTouch = touch.attach();
     this.wireOverlayTouch();
+    this.fitCanvas();
     this.loop = new GameLoop(this.update, this.render);
     window.addEventListener("resize", this.fitCanvas);
   }
@@ -117,6 +153,7 @@ export class GameApp {
     const def = typeof level === "string" ? getLevel(level) : level;
     this.session = new GameSession(def);
     this.populateLevelSelect(def.id);
+    this.closeInfo(false);
     this.fitCanvas();
     this.input.clearDirection();
   }
@@ -125,10 +162,76 @@ export class GameApp {
     this.populateLevelSelect(this.session.level.id);
   }
 
+  private wireInfoSheet(): void {
+    this.mount.querySelector("[data-el='info-btn']")!.addEventListener("click", () => {
+      if (this.infoOpen) this.closeInfo(true);
+      else this.openInfo();
+    });
+    this.mount.querySelector("[data-el='info-close']")!.addEventListener("click", () => {
+      this.closeInfo(true);
+    });
+    this.mount.querySelector("[data-el='info-resume']")!.addEventListener("click", () => {
+      this.closeInfo(true);
+    });
+    this.mount.querySelector("[data-el='info-restart']")!.addEventListener("click", () => {
+      this.closeInfo(false);
+      this.input.requestRestart();
+    });
+    this.mount.querySelector("[data-el='info-designer']")!.addEventListener("click", () => {
+      this.closeInfo(false);
+      this.onOpenDesigner?.();
+    });
+    this.mount.querySelector("[data-el='info-level-select']")!.addEventListener("change", (e) => {
+      const id = (e.target as HTMLSelectElement).value;
+      this.loadLevel(id);
+    });
+    this.mount.querySelector("[data-el='info-sheet']")!.addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) this.closeInfo(true);
+    });
+  }
+
+  private openInfo(): void {
+    this.infoOpen = true;
+    this.pausedForInfo = this.session.phase === "playing";
+    if (this.pausedForInfo) this.session.togglePause();
+    this.mount.querySelector("[data-el='info-sheet']")!.classList.remove("hidden");
+    this.mount.querySelector("[data-el='info-btn']")!.setAttribute("aria-expanded", "true");
+    this.syncInfoSheet();
+  }
+
+  private closeInfo(resume: boolean): void {
+    if (!this.infoOpen) return;
+    this.infoOpen = false;
+    this.mount.querySelector("[data-el='info-sheet']")!.classList.add("hidden");
+    this.mount.querySelector("[data-el='info-btn']")!.setAttribute("aria-expanded", "false");
+    if (resume && this.pausedForInfo && this.session.phase === "paused") {
+      this.session.togglePause();
+    }
+    this.pausedForInfo = false;
+  }
+
+  private syncInfoSheet(): void {
+    const snap = this.session.getHud();
+    const objective = this.mount.querySelector("[data-el='info-objective']");
+    const stats = this.mount.querySelector("[data-el='info-stats']");
+    if (objective) objective.textContent = this.hud.objective.textContent;
+    if (stats) {
+      stats.innerHTML = `
+        <div class="hud-group"><span class="hud-label">Level</span><span class="hud-value">${escapeHtml(snap.levelName)}</span></div>
+        <div class="hud-group"><span class="hud-label">Floor</span><span class="hud-value">${escapeHtml(this.hud.floor.textContent ?? "")}</span></div>
+        <div class="hud-group"><span class="hud-label">Dots</span><span class="hud-value">${snap.dotsRemaining}</span></div>
+        <div class="hud-group"><span class="hud-label">Humans</span><span class="hud-value">${snap.ghostsRemaining}</span></div>
+        <div class="hud-group"><span class="hud-label">Time</span><span class="hud-value">${escapeHtml(this.hud.time.textContent ?? "")}</span></div>
+        <div class="hud-group"><span class="hud-label">Score</span><span class="hud-value">${snap.score}</span></div>
+      `;
+    }
+  }
+
   private wireOverlayTouch(): void {
     this.hud.overlay.addEventListener("pointerup", (event) => {
       // Ignore right-clicks; treat overlay tap as primary mobile action
       if (event.button !== 0 && event.pointerType === "mouse") return;
+      if (this.infoOpen) return;
       const phase = this.session.phase;
       if (phase === "ready") this.input.requestStart();
       else if (phase === "paused") this.input.requestPause();
@@ -137,35 +240,51 @@ export class GameApp {
   }
 
   private populateLevelSelect(selectedId: string): void {
-    const select = this.mount.querySelector<HTMLSelectElement>("[data-el='level-select']");
-    if (!select) return;
-    const levels = listLevels();
-    select.innerHTML = levels
+    const optionsHtml = listLevels()
       .map((level) => {
         const tag = isBuiltinLevel(level.id) ? "" : " ★";
         return `<option value="${level.id}" ${level.id === selectedId ? "selected" : ""}>${escapeHtml(level.name)}${tag}</option>`;
       })
       .join("");
+
+    for (const sel of this.mount.querySelectorAll<HTMLSelectElement>(
+      "[data-el='level-select'], [data-el='info-level-select']",
+    )) {
+      sel.innerHTML = optionsHtml;
+    }
   }
 
   private fitCanvas = (): void => {
     const wrap = this.mount.querySelector(".canvas-wrap") as HTMLElement;
     const maxW = Math.min(wrap.clientWidth || window.innerWidth - 32, 720);
     const isNarrow = window.matchMedia("(max-width: 860px), (pointer: coarse)").matches;
-    const maxH = Math.min(window.innerHeight * (isNarrow ? 0.42 : 0.58), isNarrow ? 480 : 640);
+    let maxH: number;
+    if (isNarrow) {
+      const topbar = this.mount.querySelector(".mobile-topbar") as HTMLElement | null;
+      const touch = this.mount.querySelector(".touch-mount") as HTMLElement | null;
+      const chrome = (topbar?.offsetHeight ?? 40) + (touch?.offsetHeight || 160) + 28;
+      maxH = Math.min(Math.max(window.innerHeight - chrome, 180), 520);
+    } else {
+      maxH = Math.min(window.innerHeight * 0.58, 640);
+    }
     this.renderer.resizeForMaze(this.session.maze, maxW, maxH);
   };
 
   private update = (dt: number): void => {
     if (this.input.consumeRestart()) {
       if (this.session.phase !== "ready") {
+        this.closeInfo(false);
         this.session.restart();
         this.input.clearDirection();
         this.fitCanvas();
       }
     }
     if (this.input.consumePause()) {
-      this.session.togglePause();
+      if (this.infoOpen) {
+        this.closeInfo(false);
+      } else {
+        this.session.togglePause();
+      }
     }
 
     const startRequested = this.input.consumeStart();
@@ -181,7 +300,12 @@ export class GameApp {
       this.session.getViewFloor(),
       this.session.getLiftTransition(),
     );
-    updateHud(this.hud, this.session.getHud());
+    updateHud(this.hud, this.session.getHud(), { suppressPauseOverlay: this.infoOpen });
+
+    const mobileScore = this.mount.querySelector("[data-el='mobile-score']");
+    if (mobileScore) mobileScore.textContent = this.hud.score.textContent;
+
+    if (this.infoOpen) this.syncInfoSheet();
   };
 }
 

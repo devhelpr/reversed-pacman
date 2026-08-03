@@ -82,8 +82,8 @@ export const LEGEND_ITEMS: LegendItem[] = [
   },
 ];
 
-export function createLegend(parent: HTMLElement): void {
-  const items = LEGEND_ITEMS.map(
+export function legendListHtml(): string {
+  return LEGEND_ITEMS.map(
     (item) => `
       <li class="legend-item">
         <span class="legend-swatch ${item.swatchClass}" aria-hidden="true"></span>
@@ -94,12 +94,14 @@ export function createLegend(parent: HTMLElement): void {
       </li>
     `,
   ).join("");
+}
 
+export function createLegend(parent: HTMLElement): void {
   parent.innerHTML = `
     <aside class="legend" aria-label="Legenda">
       <h2 class="legend-title">Legenda</h2>
       <ul class="legend-list">
-        ${items}
+        ${legendListHtml()}
       </ul>
     </aside>
   `;
