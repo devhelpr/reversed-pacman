@@ -78,7 +78,7 @@ export class GameApp {
           <span class="help-desktop"><kbd>P</kbd> pause</span>
           <span class="help-desktop"><kbd>R</kbd> restart</span>
         </footer>
-        <div data-el="info-sheet" class="info-sheet hidden" role="dialog" aria-modal="true" aria-labelledby="info-sheet-title">
+        <dialog data-el="info-sheet" class="info-sheet" aria-labelledby="info-sheet-title">
           <div class="info-sheet-card">
             <div class="info-sheet-header">
               <h2 id="info-sheet-title">Info</h2>
@@ -102,7 +102,7 @@ export class GameApp {
               </ul>
             </aside>
           </div>
-        </div>
+        </dialog>
       </div>
     `;
 
@@ -146,6 +146,11 @@ export class GameApp {
     this.detachInput();
     this.detachTouch();
     window.removeEventListener("resize", this.fitCanvas);
+    if (this.hud.overlay.open) this.hud.overlay.close();
+    const infoSheet = this.mount.querySelector(
+      "[data-el='info-sheet']",
+    ) as HTMLDialogElement | null;
+    if (infoSheet?.open) infoSheet.close();
     this.mount.replaceChildren();
   }
 
@@ -163,6 +168,8 @@ export class GameApp {
   }
 
   private wireInfoSheet(): void {
+    const infoSheet = this.mount.querySelector("[data-el='info-sheet']") as HTMLDialogElement;
+
     this.mount.querySelector("[data-el='info-btn']")!.addEventListener("click", () => {
       if (this.infoOpen) this.closeInfo(true);
       else this.openInfo();
@@ -185,24 +192,31 @@ export class GameApp {
       const id = (e.target as HTMLSelectElement).value;
       this.loadLevel(id);
     });
-    this.mount.querySelector("[data-el='info-sheet']")!.addEventListener("click", (e) => {
-      if (e.target === e.currentTarget) this.closeInfo(true);
+    infoSheet.addEventListener("click", (e) => {
+      if (e.target === infoSheet) this.closeInfo(true);
+    });
+    infoSheet.addEventListener("cancel", (e) => {
+      e.preventDefault();
+      this.closeInfo(true);
     });
   }
 
   private openInfo(): void {
+    const infoSheet = this.mount.querySelector("[data-el='info-sheet']") as HTMLDialogElement;
     this.infoOpen = true;
     this.pausedForInfo = this.session.phase === "playing";
     if (this.pausedForInfo) this.session.togglePause();
-    this.mount.querySelector("[data-el='info-sheet']")!.classList.remove("hidden");
+    if (this.hud.overlay.open) this.hud.overlay.close();
+    if (!infoSheet.open) infoSheet.showModal();
     this.mount.querySelector("[data-el='info-btn']")!.setAttribute("aria-expanded", "true");
     this.syncInfoSheet();
   }
 
   private closeInfo(resume: boolean): void {
     if (!this.infoOpen) return;
+    const infoSheet = this.mount.querySelector("[data-el='info-sheet']") as HTMLDialogElement;
     this.infoOpen = false;
-    this.mount.querySelector("[data-el='info-sheet']")!.classList.add("hidden");
+    if (infoSheet.open) infoSheet.close();
     this.mount.querySelector("[data-el='info-btn']")!.setAttribute("aria-expanded", "false");
     if (resume && this.pausedForInfo && this.session.phase === "paused") {
       this.session.togglePause();
@@ -233,14 +247,23 @@ export class GameApp {
   }
 
   private wireOverlayTouch(): void {
-    this.hud.overlay.addEventListener("pointerup", (event) => {
-      // Ignore right-clicks; treat overlay tap as primary mobile action
-      if (event.button !== 0 && event.pointerType === "mouse") return;
+    const act = (): void => {
       if (this.infoOpen) return;
       const phase = this.session.phase;
       if (phase === "ready") this.input.requestStart();
       else if (phase === "paused") this.input.requestPause();
       else if (phase === "won" || phase === "lost") this.input.requestRestart();
+    };
+
+    this.hud.overlay.addEventListener("pointerup", (event) => {
+      // Ignore right-clicks; treat overlay tap as primary mobile action
+      if (event.button !== 0 && event.pointerType === "mouse") return;
+      act();
+    });
+    // Keep the dialog open; Escape should trigger the same primary action.
+    this.hud.overlay.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      act();
     });
   }
 
@@ -305,7 +328,7 @@ export class GameApp {
       this.session.getViewFloor(),
       this.session.getLiftTransition(),
     );
-    updateHud(this.hud, this.session.getHud(), { suppressPauseOverlay: this.infoOpen });
+    updateHud(this.hud, this.session.getHud(), { suppressOverlay: this.infoOpen });
 
     const mobileScore = this.mount.querySelector("[data-el='mobile-score']");
     if (mobileScore) mobileScore.textContent = this.hud.score.textContent;

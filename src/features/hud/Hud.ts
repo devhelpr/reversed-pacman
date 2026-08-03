@@ -18,7 +18,7 @@ export interface HudElements {
   score: HTMLElement;
   objective: HTMLElement;
   baitBanner: HTMLElement;
-  overlay: HTMLElement;
+  overlay: HTMLDialogElement;
   overlayCard: HTMLElement;
   overlayTitle: HTMLElement;
   overlayBody: HTMLElement;
@@ -56,14 +56,14 @@ export function createHud(parent: HTMLElement): HudElements {
     </header>
     <p data-hud="objective" class="objective"></p>
     <p data-hud="bait-banner" class="bait-banner hidden" role="status" aria-live="polite"></p>
-    <div data-hud="overlay" class="overlay hidden">
+    <dialog data-hud="overlay" class="overlay">
       <div data-hud="overlay-card" class="overlay-card">
         <h2 data-hud="overlay-title"></h2>
         <p data-hud="overlay-body"></p>
         <p data-hud="overlay-cta" class="overlay-cta hidden"></p>
         <p data-hud="overlay-hint" class="overlay-hint"></p>
       </div>
-    </div>
+    </dialog>
   `;
 
   const q = (sel: string) => parent.querySelector(sel) as HTMLElement;
@@ -78,7 +78,7 @@ export function createHud(parent: HTMLElement): HudElements {
     score: q('[data-hud="score"]'),
     objective: q('[data-hud="objective"]'),
     baitBanner: q('[data-hud="bait-banner"]'),
-    overlay: q('[data-hud="overlay"]'),
+    overlay: q('[data-hud="overlay"]') as HTMLDialogElement,
     overlayCard: q('[data-hud="overlay-card"]'),
     overlayTitle: q('[data-hud="overlay-title"]'),
     overlayBody: q('[data-hud="overlay-body"]'),
@@ -88,8 +88,8 @@ export function createHud(parent: HTMLElement): HudElements {
 }
 
 export interface HudUpdateOptions {
-  /** When true, suppress the default pause overlay (e.g. info sheet is open). */
-  suppressPauseOverlay?: boolean;
+  /** When true, suppress phase overlays (e.g. info dialog is open). */
+  suppressOverlay?: boolean;
 }
 
 export function updateHud(
@@ -127,7 +127,9 @@ export function updateHud(
         : "All humans caught! Reach the glowing exit to finish.";
   }
 
-  if (snap.phase === "ready") {
+  if (options.suppressOverlay) {
+    hideOverlay(els);
+  } else if (snap.phase === "ready") {
     showOverlay(els, {
       title: "Ready?",
       body: "Catch the humans before they eat every dot, then reach the green exit.\nTap ⓘ for tile info.",
@@ -135,7 +137,7 @@ export function updateHud(
       hint: "ⓘ pause & info · R restart",
       variant: "start",
     });
-  } else if (snap.phase === "paused" && !options.suppressPauseOverlay) {
+  } else if (snap.phase === "paused") {
     showOverlay(els, {
       title: "Paused",
       body: "Take a breath — the dots can wait.",
@@ -197,7 +199,6 @@ interface OverlayContent {
 }
 
 function showOverlay(els: HudElements, content: OverlayContent): void {
-  els.overlay.classList.remove("hidden");
   els.overlayCard.classList.toggle("overlay-card--start", content.variant === "start");
   els.overlayTitle.textContent = content.title;
   els.overlayBody.textContent = content.body;
@@ -210,9 +211,15 @@ function showOverlay(els: HudElements, content: OverlayContent): void {
     els.overlayCta.textContent = "";
     els.overlayCta.classList.add("hidden");
   }
+
+  if (!els.overlay.open) {
+    els.overlay.showModal();
+  }
 }
 
 function hideOverlay(els: HudElements): void {
-  els.overlay.classList.add("hidden");
+  if (els.overlay.open) {
+    els.overlay.close();
+  }
   els.overlayCard.classList.remove("overlay-card--start");
 }
