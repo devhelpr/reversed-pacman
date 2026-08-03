@@ -51,11 +51,7 @@ export class GameSession {
       (start, i) => new Ghost(start, this.level.ghostSpeed, i, this.level.ghostEatIntervalSeconds),
     );
     this.traps = new TrapSystem(this.level, this.maze.allTrapdoorPositions());
-    this.phase = "ready";
-    this.elapsedSeconds = 0;
-    this.bonusCollected = 0;
-    this.finalScore = null;
-    this.loseReason = null;
+    this.start();
   }
 
   update(dt: number, desiredDirection: Direction, startRequested = false): void {
