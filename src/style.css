@@ -36,6 +36,16 @@ body {
   touch-action: manipulation;
   -ms-touch-action: manipulation;
   overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 body {
