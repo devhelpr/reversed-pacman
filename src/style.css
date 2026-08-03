@@ -28,13 +28,16 @@
   box-sizing: border-box;
 }
 
+/* touch-action is not inherited — apply to every element so double-tap zoom is blocked */
+* {
+  touch-action: manipulation;
+  -ms-touch-action: manipulation;
+}
+
 html,
 body {
   margin: 0;
   min-height: 100%;
-  /* Prevent pinch / double-tap zoom from breaking touch game controls */
-  touch-action: manipulation;
-  -ms-touch-action: manipulation;
   overscroll-behavior: none;
   user-select: none;
   -webkit-user-select: none;
