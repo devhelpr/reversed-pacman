@@ -281,7 +281,7 @@ body {
   min-height: 1.3em;
 }
 
-/* Desktop: fixed to the viewport bottom. Mobile: anchored above the D-pad dock. */
+/* Desktop: fixed to the viewport bottom. Mobile: in-flow status strip in the bottom dock. */
 .bait-banner {
   position: fixed;
   left: 50%;
@@ -309,6 +309,9 @@ body {
 
 .touch-dock {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .canvas-wrap {
@@ -628,24 +631,26 @@ body {
   }
 
   /*
-   * Pin the touch dock to the viewport bottom, then sit the banner
-   * immediately above it — avoids a magic rem offset that floated mid-screen.
+   * Pin the touch dock to the viewport bottom. The bait banner is an in-flow
+   * status strip after the D-pad — flush with the bottom of the viewport.
    */
   .touch-dock {
     margin-top: auto;
     flex-shrink: 0;
+    padding-bottom: max(0.15rem, env(safe-area-inset-bottom, 0px));
   }
 
   .bait-banner {
-    position: absolute;
-    left: 50%;
+    position: static;
+    left: auto;
     right: auto;
-    bottom: 100%;
+    bottom: auto;
     width: min(520px, calc(100% - 1.5rem));
-    margin: 0 0 0.35rem;
-    transform: translateX(-50%);
+    margin: 0.4rem 0 0;
+    transform: none;
     font-size: 0.5rem;
     padding: 0.45rem 0.6rem;
+    box-shadow: 0 -2px 0 #0a0806;
   }
 
   .legend-mount {
@@ -664,6 +669,10 @@ body {
     gap: 0.4rem;
     min-height: calc(100svh - 1rem);
     height: calc(100svh - 1rem);
+  }
+
+  .touch-mount {
+    width: 100%;
   }
 
   .canvas-wrap {

@@ -128,8 +128,9 @@ export class GameApp {
     this.hud = createHud(hudMount);
     createLegend(legendMount);
     this.renderer = new CanvasRenderer(canvas);
-    // Keep the banner in the bottom dock so mobile can pin it above the D-pad.
-    touchDock.insertBefore(this.hud.baitBanner, touchMount);
+    // Keep the banner in the bottom dock after the D-pad so it sits at the
+    // viewport bottom as a status strip (controls stay above it).
+    touchDock.appendChild(this.hud.baitBanner);
 
     const level = options.level ?? (options.levelId ? getLevel(options.levelId) : getFirstLevel());
     this.session = new GameSession(level);
