@@ -1,6 +1,7 @@
 import { GameLoop } from "../../core/engine/GameLoop";
 import { InputManager } from "../../core/engine/Input";
 import { CanvasRenderer } from "../../core/render/CanvasRenderer";
+import { getLastPlayerName, rankForScore, submitHighScore } from "../../core/scoring/HighScores";
 import {
   getFirstLevel,
   getLevel,
@@ -9,7 +10,14 @@ import {
   type LevelDefinition,
 } from "../levels";
 import { GameSession } from "./GameSession";
-import { createHud, updateHud, type HudElements } from "../hud/Hud";
+import {
+  createHud,
+  renderHighScoresSlide,
+  setOverlaySlide,
+  updateHud,
+  type HighScorePrompt,
+  type HudElements,
+} from "../hud/Hud";
 import { createLegend, legendListHtml } from "../hud/Legend";
 import { TouchControls } from "../controls/TouchControls";
 
@@ -37,6 +45,9 @@ export class GameApp {
   private infoOpen = false;
   /** True when we paused the session specifically to open the info sheet. */
   private pausedForInfo = false;
+  /** End-screen high-score prompt for the current round (wins only). */
+  private highScorePrompt: HighScorePrompt | null = null;
+  private highScorePhaseKey: string | null = null;
 
   constructor(options: GameAppOptions) {
     this.mount = options.mount;
@@ -133,6 +144,7 @@ export class GameApp {
     });
 
     this.wireInfoSheet();
+    this.wireOverlaySlides();
     this.detachInput = this.input.attach();
     const touch = new TouchControls(this.input, touchMount, swipeTarget);
     this.detachTouch = touch.attach();
@@ -162,6 +174,8 @@ export class GameApp {
   loadLevel(level: LevelDefinition | string): void {
     const def = typeof level === "string" ? getLevel(level) : level;
     this.session = new GameSession(def);
+    this.highScorePrompt = null;
+    this.highScorePhaseKey = null;
     this.populateLevelSelect(def.id);
     this.closeInfo(false);
     this.fitCanvas();
@@ -251,23 +265,109 @@ export class GameApp {
     }
   }
 
+  private wireOverlaySlides(): void {
+    this.hud.overlayScoresBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setOverlaySlide(this.hud, "scores");
+      renderHighScoresSlide(this.hud, this.session.level.id);
+    });
+    this.hud.overlayBackBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setOverlaySlide(this.hud, "main");
+    });
+    this.hud.overlayNameInput.addEventListener("input", () => {
+      this.hud.overlayNameInput.dataset.touched = "1";
+    });
+    this.hud.overlayNameForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.saveHighScore();
+    });
+  }
+
+  private saveHighScore(force = false): void {
+    const prompt = this.highScorePrompt;
+    if (!prompt || prompt.submitted) return;
+    const name = force
+      ? this.hud.overlayNameInput.value || prompt.playerName || getLastPlayerName()
+      : this.hud.overlayNameInput.value;
+    const result = submitHighScore({
+      levelId: this.session.level.id,
+      levelName: this.session.level.name,
+      score: prompt.score,
+      playerName: name,
+    });
+    if (!result) return;
+    this.highScorePrompt = {
+      rank: result.rank,
+      score: prompt.score,
+      submitted: true,
+      playerName: name,
+    };
+    delete this.hud.overlayNameInput.dataset.touched;
+    if (this.hud.overlaySlide === "scores") {
+      renderHighScoresSlide(this.hud, this.session.level.id);
+    }
+  }
+
+  private syncHighScorePrompt(): void {
+    const phase = this.session.phase;
+    if (phase !== "won" && phase !== "lost") {
+      this.highScorePrompt = null;
+      this.highScorePhaseKey = null;
+      return;
+    }
+
+    const key = `${this.session.level.id}:${phase}:${this.session.finalScore?.total ?? 0}`;
+    if (this.highScorePhaseKey === key) return;
+    this.highScorePhaseKey = key;
+
+    if (phase !== "won" || !this.session.finalScore) {
+      this.highScorePrompt = null;
+      return;
+    }
+
+    const score = this.session.finalScore.total;
+    const rank = rankForScore(this.session.level.id, score);
+    this.highScorePrompt = rank
+      ? {
+          rank,
+          score,
+          submitted: false,
+          playerName: getLastPlayerName(),
+        }
+      : null;
+  }
+
   private wireOverlayTouch(): void {
     const act = (): void => {
       if (this.infoOpen) return;
+      if (this.hud.overlaySlide === "scores") return;
       const phase = this.session.phase;
       if (phase === "ready") this.input.requestStart();
       else if (phase === "paused") this.input.requestPause();
-      else if (phase === "won" || phase === "lost") this.input.requestRestart();
+      else if (phase === "won" || phase === "lost") {
+        this.saveHighScore(true);
+        this.input.requestRestart();
+      }
     };
 
     this.hud.overlay.addEventListener("pointerup", (event) => {
       // Ignore right-clicks; treat overlay tap as primary mobile action
       if (event.button !== 0 && event.pointerType === "mouse") return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("button, input, label, form, a, select, textarea")) return;
       act();
     });
     // Keep the dialog open; Escape should trigger the same primary action.
     this.hud.overlay.addEventListener("cancel", (event) => {
       event.preventDefault();
+      if (this.hud.overlaySlide === "scores") {
+        setOverlaySlide(this.hud, "main");
+        return;
+      }
       act();
     });
   }
@@ -306,8 +406,11 @@ export class GameApp {
   private update = (dt: number): void => {
     if (this.input.consumeRestart()) {
       if (this.session.phase !== "ready") {
+        this.saveHighScore(true);
         this.closeInfo(false);
         this.session.restart();
+        this.highScorePrompt = null;
+        this.highScorePhaseKey = null;
         this.input.clearDirection();
         this.fitCanvas();
       }
@@ -322,6 +425,7 @@ export class GameApp {
 
     const startRequested = this.input.consumeStart();
     this.session.update(dt, this.input.getDesiredDirection(), startRequested);
+    this.syncHighScorePrompt();
     this.renderer.advanceAnim(dt);
   };
 
@@ -333,7 +437,10 @@ export class GameApp {
       this.session.getViewFloor(),
       this.session.getLiftTransition(),
     );
-    updateHud(this.hud, this.session.getHud(), { suppressOverlay: this.infoOpen });
+    updateHud(this.hud, this.session.getHud(), {
+      suppressOverlay: this.infoOpen,
+      highScore: this.highScorePrompt,
+    });
 
     const mobileScore = this.mount.querySelector("[data-el='mobile-score']");
     if (mobileScore) mobileScore.textContent = this.hud.score.textContent;

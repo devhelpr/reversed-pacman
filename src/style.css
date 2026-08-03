@@ -802,6 +802,147 @@ kbd {
   font-size: 1.05rem;
 }
 
+.overlay-slide.hidden {
+  display: none;
+}
+
+.overlay-high-score {
+  margin: 0.85rem 0 0;
+  padding: 0.55rem 0.65rem;
+  font-family: var(--pixel);
+  font-size: 0.55rem;
+  line-height: 1.55;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bg-0);
+  background: var(--accent);
+  border: 2px solid #fff3;
+}
+
+.overlay-high-score.hidden {
+  display: none;
+}
+
+.overlay-name-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  align-items: stretch;
+  margin-top: 0.75rem;
+  text-align: left;
+}
+
+.overlay-name-form.hidden {
+  display: none;
+}
+
+.overlay-name-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-family: var(--pixel);
+  font-size: 0.45rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.overlay-name-label input {
+  font-family: var(--body);
+  font-size: 1.25rem;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  background: #14110e;
+  border: 2px solid #6a5a48;
+  padding: 0.45rem 0.55rem;
+  width: 100%;
+}
+
+.overlay-name-label input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.overlay-nav-btn {
+  margin-top: 1rem;
+  width: 100%;
+}
+
+.overlay-scores-blurb {
+  margin: 0 0 0.85rem !important;
+  color: var(--muted) !important;
+  font-size: 1.05rem;
+}
+
+.overlay-scores-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-height: min(42vh, 320px);
+  overflow: auto;
+  text-align: left;
+  padding-right: 0.15rem;
+}
+
+.overlay-score-level h3 {
+  margin: 0 0 0.4rem;
+  font-family: var(--pixel);
+  font-size: 0.52rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.overlay-score-level.is-current h3 {
+  color: var(--accent-2);
+}
+
+.overlay-score-level ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.overlay-score-row {
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1fr) auto;
+  gap: 0.45rem;
+  align-items: baseline;
+  padding: 0.3rem 0.35rem;
+  background: #14110e88;
+  border: 1px solid #3a3228;
+}
+
+.overlay-score-rank {
+  font-family: var(--pixel);
+  font-size: 0.42rem;
+  color: var(--muted);
+}
+
+.overlay-score-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.15rem;
+}
+
+.overlay-score-points {
+  font-family: var(--pixel);
+  font-size: 0.48rem;
+  color: var(--accent);
+}
+
+.overlay-score-empty {
+  margin: 0;
+  padding: 0.35rem 0.2rem;
+  color: var(--muted);
+  font-size: 1.05rem;
+  list-style: none;
+}
+
 .game-title-row {
   display: flex;
   flex-wrap: wrap;
