@@ -43,8 +43,8 @@ export class GameApp {
       <div class="game-shell">
         <div class="game-title-row">
           <div class="game-title">
-            <h1>Reversed Pac-Man</h1>
-            <p class="tagline">You hunt the ghosts. The dots are theirs to steal.</p>
+            <h1>Maze Chase</h1>
+            <p class="tagline">You are the robot. Hunt the humans before they clear the maze.</p>
           </div>
           <div class="game-title-actions">
             <label class="level-select-wrap">

@@ -1,10 +1,11 @@
 import type { Maze } from "../maze/Maze";
-import type { Direction, GamePhase, LoseReason, Vec2 } from "../types";
+import type { Direction, GamePhase, LoseReason, TileKind, Vec2 } from "../types";
 import {
   createBaitSprite,
   createBonusSprite,
   createDotSprite,
   createExitSprite,
+  createFloorPattern,
   createGhostSprites,
   createLiftSprite,
   createPlayerSprites,
@@ -89,6 +90,7 @@ export class CanvasRenderer {
   private readonly hunterGhostSprites: HTMLCanvasElement[];
   private readonly dotSprite: HTMLCanvasElement;
   private readonly wallSprite: HTMLCanvasElement;
+  private readonly floorSprite: HTMLCanvasElement;
   private readonly baitSprites: HTMLCanvasElement[];
   private readonly bonusSprites: HTMLCanvasElement[];
   private readonly trapdoorClosed: HTMLCanvasElement;
@@ -119,6 +121,7 @@ export class CanvasRenderer {
     this.hunterGhostSprites = createGhostSprites(HUNTER_GHOST_PALETTE);
     this.dotSprite = createDotSprite();
     this.wallSprite = createWallPattern();
+    this.floorSprite = createFloorPattern();
     this.exitSprites = [createExitSprite(0), createExitSprite(1)];
     this.baitSprites = [createBaitSprite(0), createBaitSprite(1)];
     this.bonusSprites = [createBonusSprite(0), createBonusSprite(1)];
@@ -166,7 +169,7 @@ export class CanvasRenderer {
       traps.trapdoors.map((d) => [`${d.col},${d.row}`, d.openAmount] as const),
     );
 
-    ctx.fillStyle = "#050510";
+    ctx.fillStyle = "#14110E";
     ctx.fillRect(0, 0, this.buffer.width, this.buffer.height);
 
     // Subtle floor slide while riding a lift
@@ -192,18 +195,15 @@ export class CanvasRenderer {
 
         if (tile === "wall") {
           ctx.drawImage(this.wallSprite, x, y, tw, tw);
-          ctx.strokeStyle = "#6B8CFF";
-          ctx.lineWidth = 1;
-          ctx.strokeRect(x + 0.5, y + 0.5, tw - 1, tw - 1);
+          this.drawWallEdges(ctx, tiles, col, row, x, y, tw);
           continue;
         }
 
-        ctx.fillStyle = "#0A0A1A";
-        ctx.fillRect(x, y, tw, tw);
+        ctx.drawImage(this.floorSprite, x, y, tw, tw);
 
         switch (tile) {
           case "dot":
-            ctx.drawImage(this.dotSprite, x + (tw - 6) / 2, y + (tw - 6) / 2);
+            ctx.drawImage(this.dotSprite, x + (tw - 5) / 2, y + (tw - 5) / 2);
             break;
           case "bait":
             ctx.drawImage(
@@ -292,7 +292,7 @@ export class CanvasRenderer {
 
       if (actor.kind === "player") {
         if (actor.hunted && fall === 0 && lift === undefined) {
-          ctx.fillStyle = "#4B7BFF88";
+          ctx.fillStyle = "#4B8CFF66";
           ctx.beginPath();
           ctx.arc(actor.worldPos.x * tw, actor.worldPos.y * tw, 9, 0, Math.PI * 2);
           ctx.fill();
@@ -338,6 +338,58 @@ export class CanvasRenderer {
     this.ctx.drawImage(this.buffer, 0, 0, this.canvas.width, this.canvas.height);
   }
 
+  /** Draw corridor-facing wall edges only — solid masses instead of a Pac-Man cell grid. */
+  private drawWallEdges(
+    ctx: CanvasRenderingContext2D,
+    tiles: readonly (readonly TileKind[])[],
+    col: number,
+    row: number,
+    x: number,
+    y: number,
+    tw: number,
+  ): void {
+    const open = (c: number, r: number): boolean => {
+      const t = tiles[r]?.[c];
+      return t !== undefined && t !== "wall";
+    };
+
+    const edge = "#C4A060";
+    const shade = "#1A1510";
+    ctx.fillStyle = edge;
+
+    if (open(col, row - 1)) {
+      ctx.fillRect(x, y, tw, 2);
+      ctx.fillStyle = shade;
+      ctx.fillRect(x, y + 2, tw, 1);
+      ctx.fillStyle = edge;
+    }
+    if (open(col, row + 1)) {
+      ctx.fillStyle = shade;
+      ctx.fillRect(x, y + tw - 3, tw, 1);
+      ctx.fillStyle = edge;
+      ctx.fillRect(x, y + tw - 2, tw, 2);
+    }
+    if (open(col - 1, row)) {
+      ctx.fillRect(x, y, 2, tw);
+      ctx.fillStyle = shade;
+      ctx.fillRect(x + 2, y, 1, tw);
+      ctx.fillStyle = edge;
+    }
+    if (open(col + 1, row)) {
+      ctx.fillStyle = shade;
+      ctx.fillRect(x + tw - 3, y, 1, tw);
+      ctx.fillStyle = edge;
+      ctx.fillRect(x + tw - 2, y, 2, tw);
+    }
+
+    // Corner rivets where two open sides meet
+    ctx.fillStyle = "#F0B429";
+    if (open(col - 1, row) && open(col, row - 1)) ctx.fillRect(x + 1, y + 1, 2, 2);
+    if (open(col + 1, row) && open(col, row - 1)) ctx.fillRect(x + tw - 3, y + 1, 2, 2);
+    if (open(col - 1, row) && open(col, row + 1)) ctx.fillRect(x + 1, y + tw - 3, 2, 2);
+    if (open(col + 1, row) && open(col, row + 1)) ctx.fillRect(x + tw - 3, y + tw - 3, 2, 2);
+  }
+
   /** Horizontal shutter + flash while changing floors. */
   private drawLiftWipe(ctx: CanvasRenderingContext2D, lift: LiftTransition): void {
     const t = Math.min(1, Math.max(0, lift.progress));
@@ -347,10 +399,10 @@ export class CanvasRenderer {
     const band = Math.floor(h * 0.42 * peak);
 
     ctx.save();
-    ctx.fillStyle = `rgba(5, 5, 16, ${0.2 + peak * 0.65})`;
+    ctx.fillStyle = `rgba(20, 17, 14, ${0.2 + peak * 0.65})`;
     ctx.fillRect(0, 0, w, h);
 
-    ctx.fillStyle = lift.dir === "up" ? "#5CFF8A" : "#FF9E4A";
+    ctx.fillStyle = lift.dir === "up" ? "#3DFFB5" : "#F0B429";
     ctx.globalAlpha = 0.35 + peak * 0.45;
     if (lift.dir === "up") {
       ctx.fillRect(0, 0, w, band);
@@ -362,13 +414,13 @@ export class CanvasRenderer {
 
     // Center streak in travel direction
     ctx.globalAlpha = peak * 0.55;
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "#f4efe6";
     const streakY = lift.dir === "up" ? h * (1 - t) : h * t;
     ctx.fillRect(0, streakY - 1, w, 2);
 
     // Tiny arrow cue
     ctx.globalAlpha = 0.7 + peak * 0.3;
-    ctx.fillStyle = lift.dir === "up" ? "#5CFF8A" : "#FF9E4A";
+    ctx.fillStyle = lift.dir === "up" ? "#3DFFB5" : "#F0B429";
     const cx = w / 2;
     const cy = h / 2;
     ctx.beginPath();

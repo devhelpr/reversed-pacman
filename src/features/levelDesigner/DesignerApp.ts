@@ -167,8 +167,8 @@ export class DesignerApp {
   private paramFields(): string {
     const fields: Array<{ key: keyof LevelDefinition; label: string; step?: string }> = [
       { key: "playerSpeed", label: "Player speed", step: "0.1" },
-      { key: "ghostSpeed", label: "Ghost speed", step: "0.1" },
-      { key: "ghostEatIntervalSeconds", label: "Ghost eat interval", step: "0.05" },
+      { key: "ghostSpeed", label: "Human speed", step: "0.1" },
+      { key: "ghostEatIntervalSeconds", label: "Human eat interval", step: "0.05" },
       { key: "baitDurationSeconds", label: "Bait duration", step: "0.5" },
       { key: "huntSpeedMultiplier", label: "Hunt speed ×", step: "0.05" },
       { key: "trapdoorClosedMinSeconds", label: "Trap closed min", step: "0.5" },

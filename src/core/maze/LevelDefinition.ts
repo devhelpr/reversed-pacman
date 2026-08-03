@@ -304,7 +304,7 @@ export function parseLevel(level: LevelDefinition): ParsedLevel {
 
   if (!playerStart) throw new Error("Maze needs a player start (P)");
   if (!exit) throw new Error("Maze needs an exit (E)");
-  if (ghostStarts.length === 0) throw new Error("Maze needs at least one ghost (G)");
+  if (ghostStarts.length === 0) throw new Error("Maze needs at least one human (G)");
 
   return { floors, playerStart, exit, ghostStarts, initialDotCount };
 }

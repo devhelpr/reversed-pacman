@@ -110,7 +110,7 @@ export class DesignerCanvas {
     this.canvas.height = height * CELL;
 
     const ctx = this.ctx;
-    ctx.fillStyle = "#050510";
+    ctx.fillStyle = "#14110E";
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     for (let row = 0; row < height; row++) {
@@ -118,7 +118,7 @@ export class DesignerCanvas {
         const ch = getCell(this.layout, col, row);
         const x = col * CELL;
         const y = row * CELL;
-        ctx.fillStyle = "#0A0A1A";
+        ctx.fillStyle = "#1C1814";
         ctx.fillRect(x, y, CELL, CELL);
         ctx.fillStyle = brushColor(ch);
         if (ch === "." || ch === "o" || ch === "*") {
@@ -155,10 +155,10 @@ export class DesignerCanvas {
           ctx.font = "10px monospace";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillStyle = "#fff";
+          ctx.fillStyle = "#f4efe6";
           ctx.fillText(ch, x + CELL / 2, y + CELL / 2 + 0.5);
         }
-        ctx.strokeStyle = "#1a1a30";
+        ctx.strokeStyle = "#2A241C";
         ctx.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
       }
     }

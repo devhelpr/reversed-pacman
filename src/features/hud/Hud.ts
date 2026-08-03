@@ -41,7 +41,7 @@ export function createHud(parent: HTMLElement): HudElements {
         <span data-hud="dots" class="hud-value">0</span>
       </div>
       <div class="hud-group">
-        <span class="hud-label">Ghosts</span>
+        <span class="hud-label">Humans</span>
         <span data-hud="ghosts" class="hud-value">0</span>
       </div>
       <div class="hud-group">
@@ -96,23 +96,23 @@ export function updateHud(els: HudElements, snap: HudSnapshot): void {
   els.score.textContent = String(snap.score);
 
   if (snap.baitRemaining > 0) {
-    els.objective.textContent = `BAIT ACTIVE — ghosts are hunting you! (${snap.baitRemaining.toFixed(1)}s)`;
+    els.objective.textContent = `BAIT ACTIVE — humans are hunting you! (${snap.baitRemaining.toFixed(1)}s)`;
   } else if (!snap.allGhostsCaught) {
     els.objective.textContent =
       snap.floorCount > 1
-        ? "Chase ghosts across floors. Lifts (^/v) are one-way — bait flips the hunt briefly."
-        : "Chase ghosts, avoid traps. Blue bait flips the hunt — briefly.";
+        ? "Chase humans across floors. Lifts (^/v) are one-way — bait flips the hunt briefly."
+        : "Chase humans, avoid traps. Blue bait flips the hunt — briefly.";
   } else {
     els.objective.textContent =
       snap.floorCount > 1
-        ? "All ghosts caught! Use lifts if needed, then reach the glowing exit."
-        : "All ghosts caught! Reach the glowing exit to finish.";
+        ? "All humans caught! Use lifts if needed, then reach the glowing exit."
+        : "All humans caught! Reach the glowing exit to finish.";
   }
 
   if (snap.phase === "ready") {
     showOverlay(els, {
       title: "Ready?",
-      body: "Catch the ghosts, then reach the green exit.\nUse the Legenda if a tile looks unfamiliar.",
+      body: "Catch the humans, then reach the green exit.\nUse the Legenda if a tile looks unfamiliar.",
       cta: "Tap here · pad · swipe · or keyboard to start",
       hint: "P / Pause · R / Restart",
       variant: "start",
@@ -149,7 +149,7 @@ function loseCopy(reason: HudSnapshot["loseReason"]): { title: string; body: str
     case "ghost":
       return {
         title: "Caught!",
-        body: "A hunting ghost got you while bait was active.",
+        body: "A hunting human got you while bait was active.",
       };
     case "trapdoor":
       return {
@@ -165,7 +165,7 @@ function loseCopy(reason: HudSnapshot["loseReason"]): { title: string; body: str
     default:
       return {
         title: "Dots gone!",
-        body: "The ghosts ate everything.",
+        body: "The humans ate everything.",
       };
   }
 }

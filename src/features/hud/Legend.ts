@@ -11,13 +11,13 @@ export const LEGEND_ITEMS: LegendItem[] = [
   {
     id: "you",
     swatchClass: "swatch-you",
-    label: "You",
-    detail: "Catch ghosts by touching them",
+    label: "Robot",
+    detail: "That's you — catch humans by touching them",
   },
   {
     id: "ghost",
     swatchClass: "swatch-ghost",
-    label: "Ghost",
+    label: "Human",
     detail: "Eats yellow dots — catch them all",
   },
   {
@@ -36,7 +36,7 @@ export const LEGEND_ITEMS: LegendItem[] = [
     id: "bait",
     swatchClass: "swatch-bait",
     label: "Blue bait",
-    detail: "You can eat it — ghosts hunt you briefly",
+    detail: "You can eat it — humans hunt you briefly",
   },
   {
     id: "trapdoor",
@@ -78,7 +78,7 @@ export const LEGEND_ITEMS: LegendItem[] = [
     id: "exit",
     swatchClass: "swatch-exit",
     label: "Exit",
-    detail: "Reach after all ghosts are caught",
+    detail: "Reach after all humans are caught",
   },
 ];
 
