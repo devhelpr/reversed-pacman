@@ -51,6 +51,7 @@ export interface HudSnapshot {
   timeBonus: number;
   bonusScore: number;
   bonusCollected: number;
+  levelId: string;
   levelName: string;
   allGhostsCaught: boolean;
   baitRemaining: number;

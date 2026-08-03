@@ -201,6 +201,7 @@ export class GameSession {
       timeBonus: score.timeBonus,
       bonusScore: score.bonusScore,
       bonusCollected: score.bonusCollected,
+      levelId: this.level.id,
       levelName: this.level.name,
       allGhostsCaught: ghostsRemaining === 0,
       baitRemaining: this.player.baitRemaining,
