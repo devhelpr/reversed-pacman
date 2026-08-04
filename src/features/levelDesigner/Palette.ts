@@ -8,7 +8,7 @@ export interface PaletteBrush {
 }
 
 export const PALETTE: PaletteBrush[] = [
-  { char: "#", label: "Wall", color: "#3A342C", hint: "Solid wall" },
+  { char: "#", label: "Wall", color: "#8AB0D0", hint: "Metal pipe wall" },
   { char: ".", label: "Dot", color: "#F0D878", hint: "Scoreable path" },
   { char: " ", label: "Empty", color: "#1A1512", hint: "Path, no dot" },
   { char: "P", label: "Robot", color: "#C8D0D8", hint: "One spawn" },

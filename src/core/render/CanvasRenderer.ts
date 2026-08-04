@@ -255,7 +255,7 @@ export class CanvasRenderer {
       traps.trapdoors.map((d) => [`${d.col},${d.row}`, d.openAmount] as const),
     );
 
-    ctx.fillStyle = "#14110E";
+    ctx.fillStyle = "#0A0C12";
     ctx.fillRect(0, 0, this.buffer.width, this.buffer.height);
 
     // Subtle floor slide while riding a lift
@@ -281,7 +281,7 @@ export class CanvasRenderer {
 
         if (tile === "wall") {
           ctx.drawImage(this.wallSprite, x, y, tw, tw);
-          this.drawWallEdges(ctx, tiles, col, row, x, y, tw);
+          this.drawWallPipes(ctx, tiles, col, row, x, y, tw);
           continue;
         }
 
@@ -445,8 +445,11 @@ export class CanvasRenderer {
     );
   }
 
-  /** Draw corridor-facing wall edges only — solid masses instead of a Pac-Man cell grid. */
-  private drawWallEdges(
+  /**
+   * Perimeter metal pipes around wall masses.
+   * Straight runs meet rounded elbows so corners flow continuously.
+   */
+  private drawWallPipes(
     ctx: CanvasRenderingContext2D,
     tiles: readonly (readonly TileKind[])[],
     col: number,
@@ -455,46 +458,144 @@ export class CanvasRenderer {
     y: number,
     tw: number,
   ): void {
-    const open = (c: number, r: number): boolean => {
+    const isWall = (c: number, r: number): boolean => {
       const t = tiles[r]?.[c];
-      return t !== undefined && t !== "wall";
+      // Out of bounds counts as wall so outer maze rim stays solid
+      return t === undefined || t === "wall";
     };
 
-    const edge = "#C4A060";
-    const shade = "#1A1510";
-    ctx.fillStyle = edge;
+    const n = isWall(col, row - 1);
+    const e = isWall(col + 1, row);
+    const s = isWall(col, row + 1);
+    const w = isWall(col - 1, row);
+    const ne = isWall(col + 1, row - 1);
+    const nw = isWall(col - 1, row - 1);
+    const se = isWall(col + 1, row + 1);
+    const sw = isWall(col - 1, row + 1);
 
-    if (open(col, row - 1)) {
-      ctx.fillRect(x, y, tw, 2);
-      ctx.fillStyle = shade;
-      ctx.fillRect(x, y + 2, tw, 1);
-      ctx.fillStyle = edge;
+    const P = Math.max(4, Math.floor(tw * 0.35)); // pipe thickness
+
+    // Outer corners first so straights can abut cleanly
+    if (!n && !w) this.fillPipeElbow(ctx, x, y, P, "nw");
+    if (!n && !e) this.fillPipeElbow(ctx, x + tw - P, y, P, "ne");
+    if (!s && !w) this.fillPipeElbow(ctx, x, y + tw - P, P, "sw");
+    if (!s && !e) this.fillPipeElbow(ctx, x + tw - P, y + tw - P, P, "se");
+
+    // Straight runs — inset by P on ends that have an outer elbow
+    if (!n) {
+      const x0 = x + (!w ? P : 0);
+      const x1 = x + tw - (!e ? P : 0);
+      if (x1 > x0) this.fillPipeH(ctx, x0, y, x1 - x0, P, false);
     }
-    if (open(col, row + 1)) {
-      ctx.fillStyle = shade;
-      ctx.fillRect(x, y + tw - 3, tw, 1);
-      ctx.fillStyle = edge;
-      ctx.fillRect(x, y + tw - 2, tw, 2);
+    if (!s) {
+      const x0 = x + (!w ? P : 0);
+      const x1 = x + tw - (!e ? P : 0);
+      if (x1 > x0) this.fillPipeH(ctx, x0, y + tw - P, x1 - x0, P, true);
     }
-    if (open(col - 1, row)) {
-      ctx.fillRect(x, y, 2, tw);
-      ctx.fillStyle = shade;
-      ctx.fillRect(x + 2, y, 1, tw);
-      ctx.fillStyle = edge;
+    if (!w) {
+      const y0 = y + (!n ? P : 0);
+      const y1 = y + tw - (!s ? P : 0);
+      if (y1 > y0) this.fillPipeV(ctx, x, y0, P, y1 - y0, false);
     }
-    if (open(col + 1, row)) {
-      ctx.fillStyle = shade;
-      ctx.fillRect(x + tw - 3, y, 1, tw);
-      ctx.fillStyle = edge;
-      ctx.fillRect(x + tw - 2, y, 2, tw);
+    if (!e) {
+      const y0 = y + (!n ? P : 0);
+      const y1 = y + tw - (!s ? P : 0);
+      if (y1 > y0) this.fillPipeV(ctx, x + tw - P, y0, P, y1 - y0, true);
     }
 
-    // Corner rivets where two open sides meet
-    ctx.fillStyle = "#F0B429";
-    if (open(col - 1, row) && open(col, row - 1)) ctx.fillRect(x + 1, y + 1, 2, 2);
-    if (open(col + 1, row) && open(col, row - 1)) ctx.fillRect(x + tw - 3, y + 1, 2, 2);
-    if (open(col - 1, row) && open(col, row + 1)) ctx.fillRect(x + 1, y + tw - 3, 2, 2);
-    if (open(col + 1, row) && open(col, row + 1)) ctx.fillRect(x + tw - 3, y + tw - 3, 2, 2);
+    // Inner (concave) corners — pipe wraps into the notch
+    if (n && w && !nw) this.fillPipeInner(ctx, x, y, P, "nw");
+    if (n && e && !ne) this.fillPipeInner(ctx, x + tw - P, y, P, "ne");
+    if (s && w && !sw) this.fillPipeInner(ctx, x, y + tw - P, P, "sw");
+    if (s && e && !se) this.fillPipeInner(ctx, x + tw - P, y + tw - P, P, "se");
+  }
+
+  /** Horizontal pipe band; `flip` = south face (corridor below). */
+  private fillPipeH(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    flip: boolean,
+  ): void {
+    for (let i = 0; i < h; i++) {
+      const t = (i + 0.5) / h;
+      // Corridor side is bright: north → top rows, south → bottom rows
+      const u = flip ? t : 1 - t;
+      ctx.fillStyle = this.pipeShade(u);
+      ctx.fillRect(x, y + i, w, 1);
+    }
+  }
+
+  /** Vertical pipe band; `flip` = east face (corridor right). */
+  private fillPipeV(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    flip: boolean,
+  ): void {
+    for (let i = 0; i < w; i++) {
+      const t = (i + 0.5) / w;
+      const u = flip ? t : 1 - t;
+      ctx.fillStyle = this.pipeShade(u);
+      ctx.fillRect(x + i, y, 1, h);
+    }
+  }
+
+  /** Outer elbow — quarter-disk; outer arc (corridor) matches straight highlight. */
+  private fillPipeElbow(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    p: number,
+    corner: "nw" | "ne" | "sw" | "se",
+  ): void {
+    for (let py = 0; py < p; py++) {
+      for (let px = 0; px < p; px++) {
+        const sx = corner === "nw" || corner === "sw" ? p - 0.5 - px : px + 0.5;
+        const sy = corner === "nw" || corner === "ne" ? p - 0.5 - py : py + 0.5;
+        const dist = Math.sqrt(sx * sx + sy * sy);
+        if (dist > p) continue;
+        // dist 0 = wall-inner (dark), dist p = corridor-outer (bright) — same as straights
+        ctx.fillStyle = this.pipeShade(dist / p);
+        ctx.fillRect(x + px, y + py, 1, 1);
+      }
+    }
+  }
+
+  /** Inner elbow — quarter disk; corridor sits at the notch corner. */
+  private fillPipeInner(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    p: number,
+    corner: "nw" | "ne" | "sw" | "se",
+  ): void {
+    for (let py = 0; py < p; py++) {
+      for (let px = 0; px < p; px++) {
+        const sx = corner === "nw" || corner === "sw" ? px + 0.5 : p - 0.5 - px;
+        const sy = corner === "nw" || corner === "ne" ? py + 0.5 : p - 0.5 - py;
+        const dist = Math.sqrt(sx * sx + sy * sy);
+        if (dist > p) continue;
+        // dist 0 = corridor corner (bright), dist p = into wall (dark)
+        ctx.fillStyle = this.pipeShade(1 - dist / p);
+        ctx.fillRect(x + px, y + py, 1, 1);
+      }
+    }
+  }
+
+  /** Tube cross-section — 0 wall-inner → 1 corridor-outer. */
+  private pipeShade(u: number): string {
+    if (u < 0.12) return "#2A4060";
+    if (u < 0.3) return "#3A5880";
+    if (u < 0.48) return "#5A7A9E";
+    if (u < 0.65) return "#7A9CB8";
+    if (u < 0.8) return "#A8C4DC";
+    if (u < 0.92) return "#D0E4F4";
+    return "#F0F6FC";
   }
 
   /** Horizontal shutter + flash while changing floors. */

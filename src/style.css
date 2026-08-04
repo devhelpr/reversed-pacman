@@ -137,16 +137,16 @@ body {
 
 .swatch-you {
   background:
-    linear-gradient(180deg, #f0b429 12%, #f0b429 18%, transparent 19%),
-    linear-gradient(180deg, transparent 20%, #c8d0d8 21% 72%, #8a929a 73%);
-  border: 1px solid #1a1510;
-  border-radius: 1px;
-  box-shadow: inset 0 -3px 0 #3dffb5;
+    linear-gradient(180deg, #f0b429 8%, #f0b429 14%, transparent 15%),
+    linear-gradient(180deg, transparent 18%, #a8b0b8 19% 55%, #7a8490 56% 78%, #0a0810 79%);
+  border: 1px solid #0a0810;
+  border-radius: 0;
+  box-shadow: inset 2px 0 0 #3dffb5;
 }
 
 .swatch-ghost {
-  background: linear-gradient(180deg, #3a2218 28%, #e8b896 29% 48%, #e24a4a 49% 78%, #1a1510 79%);
-  border-radius: 1px;
+  background: linear-gradient(180deg, #3a2218 22%, #e8b896 23% 45%, #e24a4a 46% 72%, #0a0810 73%);
+  border-radius: 0;
   clip-path: none;
 }
 

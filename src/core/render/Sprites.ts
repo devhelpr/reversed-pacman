@@ -1,97 +1,98 @@
 import type { Direction } from "../types";
 import { bakeSprite, flipGridX, type Pixel, type PixelGrid } from "./PixelArt";
 
-// Robot chassis palette
-const M = "#C8D0D8"; // metal
-const K = "#8A929A"; // dark metal
-const D = "#1A1510"; // outline / void
-const L = "#3DFFB5"; // LED cyan-mint
-const A = "#F0B429"; // amber accent
-const V = "#2A3340"; // visor recess
+// Robot — lean C64-style chassis (limited palette, crisp silhouette)
+const K = "#7A8490"; // metal shade
+const B = "#A8B0B8"; // metal mid
+const D = "#0A0810"; // outline
+const L = "#3DFFB5"; // LED
+const A = "#F0B429"; // amber
+const V = "#1A2430"; // visor
 
-/** 14×14 robot — proportions match human sprites (small head, torso, walking legs). */
+const _ = null;
+
+/** Slim 14×14 robot — narrow torso, clear head/legs (no pear shape). */
 function robotRight(step: 0 | 1): PixelGrid {
-  // Same stride pattern as humans
   const legs: Pixel[] =
     step === 0
-      ? [null, null, null, K, K, null, null, null, null, K, K, null, null, null]
-      : [null, null, K, K, null, null, null, null, K, K, null, null, null, null];
+      ? [_, _, _, K, K, _, _, _, _, _, K, K, _, _]
+      : [_, _, K, K, _, _, _, _, _, K, K, _, _, _];
   const shoes: Pixel[] =
     step === 0
-      ? [null, null, null, D, D, null, null, null, null, D, D, null, null, null]
-      : [null, null, D, D, null, null, null, null, D, D, null, null, null, null];
+      ? [_, _, _, D, D, _, _, _, _, _, D, D, _, _]
+      : [_, _, D, D, _, _, _, _, _, D, D, _, _, _];
 
   return [
-    [null, null, null, null, null, null, A, A, null, null, null, null, null, null],
-    [null, null, null, null, null, K, M, M, M, K, null, null, null, null],
-    [null, null, null, null, K, M, V, V, V, M, K, null, null, null],
-    [null, null, null, null, K, M, V, L, D, M, K, null, null, null],
-    [null, null, null, null, K, M, V, L, L, M, K, null, null, null],
-    [null, null, null, null, null, K, M, M, M, K, null, null, null, null],
-    [null, null, null, null, K, M, M, M, M, M, K, null, null, null],
-    [null, null, null, K, M, M, M, M, M, M, M, K, null, null],
-    [null, null, null, K, M, M, A, A, A, M, M, K, null, null],
-    [null, null, null, K, M, M, M, M, M, M, M, K, null, null],
-    [null, null, null, null, K, M, M, M, M, M, K, null, null, null],
+    [_, _, _, _, _, _, A, _, _, _, _, _, _, _],
+    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
+    [_, _, _, _, _, K, V, L, K, _, _, _, _, _],
+    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
+    [_, _, _, _, _, _, K, K, _, _, _, _, _, _],
+    [_, _, _, _, K, B, B, B, B, K, _, _, _, _],
+    [_, _, _, _, K, B, A, A, B, K, _, _, _, _],
+    [_, _, _, _, K, B, B, B, B, K, _, _, _, _],
+    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
+    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
+    [_, _, _, _, K, K, _, _, K, K, _, _, _, _],
     legs,
     shoes,
-    [null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+    [_, _, _, _, _, _, _, _, _, _, _, _, _, _],
   ];
 }
 
 function robotUp(step: 0 | 1): PixelGrid {
   const legs: Pixel[] =
     step === 0
-      ? [null, null, null, K, K, null, null, null, null, K, K, null, null, null]
-      : [null, null, K, K, null, null, null, null, K, K, null, null, null, null];
+      ? [_, _, _, K, K, _, _, _, _, _, K, K, _, _]
+      : [_, _, K, K, _, _, _, _, _, K, K, _, _, _];
   const shoes: Pixel[] =
     step === 0
-      ? [null, null, null, D, D, null, null, null, null, D, D, null, null, null]
-      : [null, null, D, D, null, null, null, null, D, D, null, null, null, null];
+      ? [_, _, _, D, D, _, _, _, _, _, D, D, _, _]
+      : [_, _, D, D, _, _, _, _, _, D, D, _, _, _];
 
   return [
-    [null, null, null, null, null, null, A, A, null, null, null, null, null, null],
-    [null, null, null, null, null, K, M, M, M, K, null, null, null, null],
-    [null, null, null, null, K, M, V, L, D, M, K, null, null, null],
-    [null, null, null, null, K, M, V, L, L, M, K, null, null, null],
-    [null, null, null, null, K, M, V, V, V, M, K, null, null, null],
-    [null, null, null, null, null, K, M, M, M, K, null, null, null, null],
-    [null, null, null, null, K, M, M, M, M, M, K, null, null, null],
-    [null, null, null, K, M, M, M, M, M, M, M, K, null, null],
-    [null, null, null, K, M, M, A, A, A, M, M, K, null, null],
-    [null, null, null, K, M, M, M, M, M, M, M, K, null, null],
-    [null, null, null, null, K, M, M, M, M, M, K, null, null, null],
+    [_, _, _, _, _, _, A, _, _, _, _, _, _, _],
+    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
+    [_, _, _, _, _, K, V, V, K, _, _, _, _, _],
+    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
+    [_, _, _, _, _, _, K, K, _, _, _, _, _, _],
+    [_, _, _, _, K, B, B, B, B, K, _, _, _, _],
+    [_, _, _, _, K, B, A, A, B, K, _, _, _, _],
+    [_, _, _, _, K, B, B, B, B, K, _, _, _, _],
+    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
+    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
+    [_, _, _, _, K, K, _, _, K, K, _, _, _, _],
     legs,
     shoes,
-    [null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+    [_, _, _, _, _, _, _, _, _, _, _, _, _, _],
   ];
 }
 
 function robotDown(step: 0 | 1): PixelGrid {
   const legs: Pixel[] =
     step === 0
-      ? [null, null, null, K, K, null, null, null, null, K, K, null, null, null]
-      : [null, null, K, K, null, null, null, null, K, K, null, null, null, null];
+      ? [_, _, _, K, K, _, _, _, _, _, K, K, _, _]
+      : [_, _, K, K, _, _, _, _, _, K, K, _, _, _];
   const shoes: Pixel[] =
     step === 0
-      ? [null, null, null, D, D, null, null, null, null, D, D, null, null, null]
-      : [null, null, D, D, null, null, null, null, D, D, null, null, null, null];
+      ? [_, _, _, D, D, _, _, _, _, _, D, D, _, _]
+      : [_, _, D, D, _, _, _, _, _, D, D, _, _, _];
 
   return [
-    [null, null, null, null, null, null, A, A, null, null, null, null, null, null],
-    [null, null, null, null, null, K, M, M, M, K, null, null, null, null],
-    [null, null, null, null, K, M, M, M, M, M, K, null, null, null],
-    [null, null, null, null, K, M, V, V, V, M, K, null, null, null],
-    [null, null, null, null, K, V, L, D, L, D, K, null, null, null],
-    [null, null, null, null, null, K, M, M, M, K, null, null, null, null],
-    [null, null, null, null, K, M, M, M, M, M, K, null, null, null],
-    [null, null, null, K, M, M, M, M, M, M, M, K, null, null],
-    [null, null, null, K, M, M, A, A, A, M, M, K, null, null],
-    [null, null, null, K, M, M, M, M, M, M, M, K, null, null],
-    [null, null, null, null, K, M, M, M, M, M, K, null, null, null],
+    [_, _, _, _, _, _, A, _, _, _, _, _, _, _],
+    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
+    [_, _, _, _, _, K, L, D, L, K, _, _, _, _],
+    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
+    [_, _, _, _, _, _, K, K, _, _, _, _, _, _],
+    [_, _, _, _, K, B, B, B, B, K, _, _, _, _],
+    [_, _, _, _, K, B, A, A, B, K, _, _, _, _],
+    [_, _, _, _, K, B, B, B, B, K, _, _, _, _],
+    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
+    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
+    [_, _, _, _, K, K, _, _, K, K, _, _, _, _],
     legs,
     shoes,
-    [null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+    [_, _, _, _, _, _, _, _, _, _, _, _, _, _],
   ];
 }
 
@@ -126,7 +127,7 @@ export function playerSpriteFor(
   return frames[frameIndex % frames.length]!;
 }
 
-// --- Humans (maze runners) ---
+// --- Humans (maze runners) — slim C64-style figures ---
 
 export type GhostPalette = {
   body: string;
@@ -140,59 +141,62 @@ export type GhostPalette = {
 const SKIN = "#E8B896";
 const SKIN_D = "#C48A62";
 const EYE_W = "#FFF8F0";
-const PUPIL = "#1A1510";
+const PUPIL = "#0A0810";
 
 function humanFrame(palette: GhostPalette, stepAlt: boolean, lookX: number): PixelGrid {
   const C = palette.body;
-  const S = palette.skirt;
-  const H = palette.hair ?? S;
+  const H = palette.hair ?? palette.skirt;
   const SK = palette.skin ?? SKIN;
   const SD = SKIN_D;
   const EW = palette.eyeWhite ?? EYE_W;
   const PU = palette.pupil ?? PUPIL;
 
-  const eyeRow = (base: Pixel[]): Pixel[] => {
-    const row = [...base];
-    const leftPupil = 4 + lookX;
-    const rightPupil = 9 + lookX;
-    for (let i = 3; i <= 5; i++) if (row[i]) row[i] = EW;
-    for (let i = 8; i <= 10; i++) if (row[i]) row[i] = EW;
-    if (leftPupil >= 3 && leftPupil <= 5) row[leftPupil] = PU;
-    if (rightPupil >= 8 && rightPupil <= 10) row[rightPupil] = PU;
+  // Pupils shift with facing; eyes stay compact (cols 5–8)
+  const eyeRow = (y: 0 | 1): Pixel[] => {
+    const row: Pixel[] = [_, _, _, _, SK, SK, SK, SK, SK, SK, _, _, _, _];
+    row[5] = EW;
+    row[6] = EW;
+    row[7] = EW;
+    row[8] = EW;
+    if (y === 1) {
+      const lp = lookX < 0 ? 5 : lookX > 0 ? 6 : 5;
+      const rp = lookX < 0 ? 7 : lookX > 0 ? 8 : 8;
+      row[lp] = PU;
+      row[rp] = PU;
+    }
     return row;
   };
 
-  // Walking legs: alternate which foot is forward
-  const legsA: Pixel[] = [null, null, null, C, C, null, null, null, null, C, C, null, null, null];
-  const legsB: Pixel[] = [null, null, C, C, null, null, null, null, C, C, null, null, null, null];
-  const shoesA: Pixel[] = [null, null, null, D, D, null, null, null, null, D, D, null, null, null];
-  const shoesB: Pixel[] = [null, null, D, D, null, null, null, null, D, D, null, null, null, null];
-  const legs = stepAlt ? legsB : legsA;
-  const shoes = stepAlt ? shoesB : shoesA;
+  const legs: Pixel[] = stepAlt
+    ? [_, _, C, C, _, _, _, _, _, C, C, _, _, _]
+    : [_, _, _, C, C, _, _, _, C, C, _, _, _, _];
+  const shoes: Pixel[] = stepAlt
+    ? [_, _, D, D, _, _, _, _, _, D, D, _, _, _]
+    : [_, _, _, D, D, _, _, _, D, D, _, _, _, _];
 
   return [
-    [null, null, null, null, H, H, H, H, H, null, null, null, null, null],
-    [null, null, null, H, H, H, H, H, H, H, null, null, null, null],
-    [null, null, null, SK, SK, SK, SK, SK, SK, SK, null, null, null, null],
-    eyeRow([null, null, null, EW, EW, EW, SK, SK, EW, EW, EW, null, null, null]),
-    eyeRow([null, null, null, EW, PU, EW, SK, SK, EW, PU, EW, null, null, null]),
-    [null, null, null, SK, SK, SD, SK, SK, SD, SK, null, null, null, null],
-    [null, null, null, null, SK, SK, SK, SK, SK, null, null, null, null, null],
-    [null, null, null, C, C, C, C, C, C, C, null, null, null, null],
-    [null, null, C, C, C, C, C, C, C, C, C, null, null, null],
-    [null, null, C, C, C, C, C, C, C, C, C, null, null, null],
-    [null, null, null, C, C, C, C, C, C, C, null, null, null, null],
+    [_, _, _, _, _, H, H, H, H, _, _, _, _, _],
+    [_, _, _, _, H, H, H, H, H, H, _, _, _, _],
+    [_, _, _, _, SK, SK, SK, SK, SK, SK, _, _, _, _],
+    eyeRow(0),
+    eyeRow(1),
+    [_, _, _, _, SK, SK, SD, SD, SK, SK, _, _, _, _],
+    [_, _, _, _, _, SK, SK, SK, SK, _, _, _, _, _],
+    [_, _, _, _, C, C, C, C, C, C, _, _, _, _],
+    [_, _, _, C, C, C, C, C, C, C, C, _, _, _],
+    [_, _, _, _, C, C, C, C, C, C, _, _, _, _],
+    [_, _, _, _, _, C, C, C, C, _, _, _, _, _],
     legs,
     shoes,
-    [null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+    [_, _, _, _, _, _, _, _, _, _, _, _, _, _],
   ];
 }
 
 export const GHOST_PALETTES: GhostPalette[] = [
-  { body: "#E24A4A", skirt: "#8B3A2A", hair: "#3A2218" }, // red jacket
-  { body: "#E28A3A", skirt: "#C45A20", hair: "#5A3A18" }, // amber coat
-  { body: "#3A9EBF", skirt: "#1E6A88", hair: "#1A2830" }, // teal sweater
-  { body: "#D45A9A", skirt: "#8A3068", hair: "#4A2038" }, // rose shirt
+  { body: "#E24A4A", skirt: "#8B3A2A", hair: "#3A2218" },
+  { body: "#E28A3A", skirt: "#C45A20", hair: "#5A3A18" },
+  { body: "#3A9EBF", skirt: "#1E6A88", hair: "#1A2830" },
+  { body: "#D45A9A", skirt: "#8A3068", hair: "#4A2038" },
 ];
 
 export function createGhostSprites(palette: GhostPalette): HTMLCanvasElement[] {
@@ -218,70 +222,43 @@ export function ghostSpriteFor(
 }
 
 export function createDotSprite(): HTMLCanvasElement {
-  // Small scrap bolt / data chip — not a classic pellet
+  // Classic pellet — small, round, bright
   const A = "#F0D878";
-  const B = "#C4A848";
+  const B = "#FFF6C8";
   const grid: PixelGrid = [
-    [null, A, A, A, null, null],
-    [A, B, A, B, A, null],
-    [A, A, B, A, A, null],
-    [A, B, A, B, A, null],
-    [null, A, A, A, null, null],
-    [null, null, null, null, null, null],
+    [_, A, A, _],
+    [A, B, A, A],
+    [A, A, A, A],
+    [_, A, A, _],
   ];
   return bakeSprite(grid);
 }
 
 export function createFloorPattern(): HTMLCanvasElement {
-  // Industrial floor plating — seams + rivet, not empty void
-  const A = "#221C18";
-  const B = "#1A1512";
-  const C = "#2C261F";
-  const R = "#3A3228";
-  const grid: PixelGrid = [
-    [C, A, A, A, A, A, A, A, A, A, A, A, A, A, A, C],
-    [A, B, B, B, B, B, B, B, B, B, B, B, B, B, B, A],
-    [A, B, R, B, B, B, B, B, B, B, B, B, B, R, B, A],
-    [A, B, B, B, B, B, B, B, B, B, B, B, B, B, B, A],
-    [A, B, B, B, B, B, B, B, B, B, B, B, B, B, B, A],
-    [A, B, B, B, B, B, B, B, B, B, B, B, B, B, B, A],
-    [A, B, B, B, B, B, B, B, B, B, B, B, B, B, B, A],
-    [A, B, B, B, B, B, B, B, B, B, B, B, B, B, B, A],
-    [A, B, B, B, B, B, B, B, B, B, B, B, B, B, B, A],
-    [A, B, B, B, B, B, B, B, B, B, B, B, B, B, B, A],
-    [A, B, B, B, B, B, B, B, B, B, B, B, B, B, B, A],
-    [A, B, B, B, B, B, B, B, B, B, B, B, B, B, B, A],
-    [A, B, B, B, B, B, B, B, B, B, B, B, B, B, B, A],
-    [A, B, R, B, B, B, B, B, B, B, B, B, B, R, B, A],
-    [A, B, B, B, B, B, B, B, B, B, B, B, B, B, B, A],
-    [C, A, A, A, A, A, A, A, A, A, A, A, A, A, A, C],
-  ];
+  // Dark corridor void — keeps metal walls readable
+  const F = "#0A0C12";
+  const S = "#12151E";
+  const grid: PixelGrid = Array.from({ length: 16 }, (_, y) =>
+    Array.from({ length: 16 }, (_, x) => (x === 0 || y === 0 ? S : F)),
+  );
   return bakeSprite(grid);
 }
 
 export function createWallPattern(): HTMLCanvasElement {
-  // Solid concrete mass — no hollow “Pac-Man corridor brick”
-  const C = "#3A342C";
-  const D = "#2A261F";
-  const E = "#4A4338";
-  const grid: PixelGrid = [
-    [C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C],
-    [C, E, C, C, C, C, C, C, C, C, C, C, C, C, D, C],
-    [C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C],
-    [C, C, C, D, D, C, C, C, C, C, C, D, D, C, C, C],
-    [C, C, C, D, D, C, C, C, C, C, C, D, D, C, C, C],
-    [C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C],
-    [C, C, C, C, C, C, C, E, E, C, C, C, C, C, C, C],
-    [C, C, C, C, C, C, C, E, E, C, C, C, C, C, C, C],
-    [C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C],
-    [C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C],
-    [C, C, C, D, D, C, C, C, C, C, C, D, D, C, C, C],
-    [C, C, C, D, D, C, C, C, C, C, C, D, D, C, C, C],
-    [C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C],
-    [C, D, C, C, C, C, C, C, C, C, C, C, C, C, E, C],
-    [C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C],
-    [C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C],
-  ];
+  // Smooth filled steel core — lighter mid-tones so pipes sit on metal, not a dark void
+  const H = "#6A8AB0";
+  const M = "#5A7A9E";
+  const L = "#4E6E92";
+  const grid: PixelGrid = Array.from({ length: 16 }, (_, y) =>
+    Array.from({ length: 16 }, (_, x) => {
+      // Soft vertical bevel, no speckles
+      if (y <= 1) return H;
+      if (y >= 14) return L;
+      if (x <= 1) return H;
+      if (x >= 14) return L;
+      return M;
+    }),
+  );
   return bakeSprite(grid);
 }
 
