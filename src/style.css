@@ -129,6 +129,12 @@ body {
   flex-shrink: 0;
 }
 
+.legend-swatch-sprite {
+  display: block;
+  box-shadow: none;
+  background: #1a1512;
+}
+
 .swatch-you {
   background:
     linear-gradient(180deg, #f0b429 12%, #f0b429 18%, transparent 19%),
@@ -163,12 +169,6 @@ body {
     linear-gradient(45deg, #e8c060 45%, transparent 46% 54%, #e8c060 55%), #c49830;
   border: 1px solid #ff3b4a;
   box-shadow: inset 0 0 0 1px #7a5a18;
-}
-
-.swatch-slime {
-  background: #3dcf5a;
-  border-radius: 40% 40% 30% 30%;
-  box-shadow: 0 2px 0 #2aae48;
 }
 
 .swatch-shock {

@@ -9,15 +9,19 @@ const L = "#3DFFB5"; // LED cyan-mint
 const A = "#F0B429"; // amber accent
 const V = "#2A3340"; // visor recess
 
-/** 14×14 robot frames — jaw open / closed for each facing. */
-function robotFrame(jawOpen: boolean, facing: "right" | "up"): PixelGrid {
-  if (facing === "up") {
-    return jawOpen ? robotUpOpen() : robotUpClosed();
-  }
-  return jawOpen ? robotRightOpen() : robotRightClosed();
-}
+/** 14×14 robot — solid chassis; `step` alternates walking feet. */
+function robotRight(step: 0 | 1): PixelGrid {
+  // step 0: left foot forward (toward facing), right back
+  // step 1: right foot forward, left back
+  const legs: Pixel[] =
+    step === 0
+      ? [null, null, null, K, K, null, null, null, null, K, null, null, null, null]
+      : [null, null, null, null, K, null, null, null, null, K, K, null, null, null];
+  const shoes: Pixel[] =
+    step === 0
+      ? [null, null, null, D, D, D, null, null, null, D, D, null, null, null]
+      : [null, null, null, D, D, null, null, null, D, D, D, null, null, null];
 
-function robotRightClosed(): PixelGrid {
   return [
     [null, null, null, null, null, null, A, A, null, null, null, null, null, null],
     [null, null, null, null, null, null, D, A, null, null, null, null, null, null],
@@ -27,35 +31,26 @@ function robotRightClosed(): PixelGrid {
     [null, null, M, V, L, D, V, V, L, D, V, M, null, null],
     [null, null, M, V, L, L, V, V, L, L, V, M, null, null],
     [null, null, M, M, M, M, M, M, M, M, M, M, null, null],
-    [null, null, M, M, D, D, D, D, D, D, M, M, null, null],
+    [null, null, M, M, K, K, K, K, K, K, M, M, null, null],
     [null, null, K, M, M, M, M, M, M, M, M, K, null, null],
     [null, null, null, K, M, A, A, A, A, M, K, null, null, null],
     [null, null, null, null, K, M, M, M, M, K, null, null, null, null],
-    [null, null, null, null, K, K, null, null, K, K, null, null, null, null],
-    [null, null, null, null, D, D, null, null, D, D, null, null, null, null],
+    legs,
+    shoes,
   ];
 }
 
-function robotRightOpen(): PixelGrid {
-  return [
-    [null, null, null, null, null, null, A, A, null, null, null, null, null, null],
-    [null, null, null, null, null, null, D, A, null, null, null, null, null, null],
-    [null, null, null, K, M, M, M, M, M, M, K, null, null, null],
-    [null, null, K, M, M, M, M, M, M, M, M, K, null, null],
-    [null, null, M, V, V, V, V, V, V, V, V, M, null, null],
-    [null, null, M, V, L, D, V, V, L, D, V, M, null, null],
-    [null, null, M, V, L, L, V, V, L, L, V, M, null, null],
-    [null, null, M, M, M, M, M, M, M, M, M, M, null, null],
-    [null, null, M, M, D, D, D, D, null, null, null, null, null, null],
-    [null, null, K, M, M, M, M, null, null, null, null, null, null, null],
-    [null, null, null, K, M, A, A, null, null, null, null, null, null, null],
-    [null, null, null, null, K, M, M, M, null, null, null, null, null, null],
-    [null, null, null, null, K, K, null, null, K, K, null, null, null, null],
-    [null, null, null, null, D, D, null, null, D, D, null, null, null, null],
-  ];
-}
+function robotUp(step: 0 | 1): PixelGrid {
+  // From behind: alternate which foot strides outward
+  const legs: Pixel[] =
+    step === 0
+      ? [null, null, null, K, K, null, null, null, null, K, null, null, null, null]
+      : [null, null, null, null, K, null, null, null, null, K, K, null, null, null];
+  const shoes: Pixel[] =
+    step === 0
+      ? [null, null, null, D, D, D, null, null, null, D, D, null, null, null]
+      : [null, null, null, D, D, null, null, null, D, D, D, null, null, null];
 
-function robotUpClosed(): PixelGrid {
   return [
     [null, null, null, null, null, null, A, A, null, null, null, null, null, null],
     [null, null, null, null, null, null, A, D, null, null, null, null, null, null],
@@ -65,35 +60,26 @@ function robotUpClosed(): PixelGrid {
     [null, null, M, V, L, L, V, V, L, L, V, M, null, null],
     [null, null, M, V, V, V, V, V, V, V, V, M, null, null],
     [null, null, M, M, M, M, M, M, M, M, M, M, null, null],
-    [null, null, M, M, D, D, D, D, D, D, M, M, null, null],
+    [null, null, M, M, K, K, K, K, K, K, M, M, null, null],
     [null, null, K, M, M, M, M, M, M, M, M, K, null, null],
     [null, null, null, K, M, A, A, A, A, M, K, null, null, null],
     [null, null, null, null, K, M, M, M, M, K, null, null, null, null],
-    [null, null, null, null, K, K, null, null, K, K, null, null, null, null],
-    [null, null, null, null, D, D, null, null, D, D, null, null, null, null],
+    legs,
+    shoes,
   ];
 }
 
-function robotUpOpen(): PixelGrid {
-  return [
-    [null, null, null, null, null, null, A, A, null, null, null, null, null, null],
-    [null, null, null, null, null, D, null, null, D, null, null, null, null, null],
-    [null, null, null, K, M, null, null, null, null, M, K, null, null, null],
-    [null, null, K, M, M, M, M, M, M, M, M, K, null, null],
-    [null, null, M, V, L, D, V, V, L, D, V, M, null, null],
-    [null, null, M, V, L, L, V, V, L, L, V, M, null, null],
-    [null, null, M, V, V, V, V, V, V, V, V, M, null, null],
-    [null, null, M, M, M, M, M, M, M, M, M, M, null, null],
-    [null, null, M, M, D, D, D, D, D, D, M, M, null, null],
-    [null, null, K, M, M, M, M, M, M, M, M, K, null, null],
-    [null, null, null, K, M, A, A, A, A, M, K, null, null, null],
-    [null, null, null, null, K, M, M, M, M, K, null, null, null, null],
-    [null, null, null, null, K, K, null, null, K, K, null, null, null, null],
-    [null, null, null, null, D, D, null, null, D, D, null, null, null, null],
-  ];
-}
+function robotDown(step: 0 | 1): PixelGrid {
+  // Facing camera: stride left vs right foot
+  const legs: Pixel[] =
+    step === 0
+      ? [null, null, null, K, K, null, null, null, null, K, null, null, null, null]
+      : [null, null, null, null, K, null, null, null, null, K, K, null, null, null];
+  const shoes: Pixel[] =
+    step === 0
+      ? [null, null, null, D, D, D, null, null, null, D, D, null, null, null]
+      : [null, null, null, D, D, null, null, null, D, D, D, null, null, null];
 
-function robotDownClosed(): PixelGrid {
   return [
     [null, null, null, null, null, null, A, A, null, null, null, null, null, null],
     [null, null, null, null, null, null, D, A, null, null, null, null, null, null],
@@ -103,31 +89,12 @@ function robotDownClosed(): PixelGrid {
     [null, null, M, V, V, V, V, V, V, V, V, M, null, null],
     [null, null, M, V, L, D, V, V, L, D, V, M, null, null],
     [null, null, M, V, L, L, V, V, L, L, V, M, null, null],
-    [null, null, M, M, D, D, D, D, D, D, M, M, null, null],
+    [null, null, M, M, K, K, K, K, K, K, M, M, null, null],
     [null, null, K, M, M, M, M, M, M, M, M, K, null, null],
     [null, null, null, K, M, A, A, A, A, M, K, null, null, null],
     [null, null, null, null, K, M, M, M, M, K, null, null, null, null],
-    [null, null, null, null, K, K, null, null, K, K, null, null, null, null],
-    [null, null, null, null, D, D, null, null, D, D, null, null, null, null],
-  ];
-}
-
-function robotDownOpen(): PixelGrid {
-  return [
-    [null, null, null, null, null, null, A, A, null, null, null, null, null, null],
-    [null, null, null, null, null, null, D, A, null, null, null, null, null, null],
-    [null, null, null, K, M, M, M, M, M, M, K, null, null, null],
-    [null, null, K, M, M, M, M, M, M, M, M, K, null, null],
-    [null, null, M, M, M, M, M, M, M, M, M, M, null, null],
-    [null, null, M, V, V, V, V, V, V, V, V, M, null, null],
-    [null, null, M, V, L, D, V, V, L, D, V, M, null, null],
-    [null, null, M, V, L, L, V, V, L, L, V, M, null, null],
-    [null, null, M, M, D, D, D, D, D, D, M, M, null, null],
-    [null, null, K, M, M, M, null, null, M, M, M, K, null, null],
-    [null, null, null, K, M, A, null, null, A, M, K, null, null, null],
-    [null, null, null, null, K, null, null, null, null, K, null, null, null, null],
-    [null, null, null, null, K, K, null, null, K, K, null, null, null, null],
-    [null, null, null, null, D, D, null, null, D, D, null, null, null, null],
+    legs,
+    shoes,
   ];
 }
 
@@ -139,13 +106,10 @@ export type PlayerSpriteSet = {
 };
 
 export function createPlayerSprites(): PlayerSpriteSet {
-  const right = [bakeSprite(robotFrame(true, "right")), bakeSprite(robotFrame(false, "right"))];
-  const left = [
-    bakeSprite(flipGridX(robotFrame(true, "right"))),
-    bakeSprite(flipGridX(robotFrame(false, "right"))),
-  ];
-  const up = [bakeSprite(robotFrame(true, "up")), bakeSprite(robotFrame(false, "up"))];
-  const down = [bakeSprite(robotDownOpen()), bakeSprite(robotDownClosed())];
+  const right = [bakeSprite(robotRight(0)), bakeSprite(robotRight(1))];
+  const left = [bakeSprite(flipGridX(robotRight(0))), bakeSprite(flipGridX(robotRight(1)))];
+  const up = [bakeSprite(robotUp(0)), bakeSprite(robotUp(1))];
+  const down = [bakeSprite(robotDown(0)), bakeSprite(robotDown(1))];
   return { right, left, up, down };
 }
 
@@ -408,162 +372,52 @@ export function createTrapdoorSprite(open: boolean): HTMLCanvasElement {
 }
 
 export function createSlimeSprite(frame: number): HTMLCanvasElement {
-  const A = frame % 2 === 0 ? "#3DCF5A" : "#2AAE48";
-  const B = frame % 2 === 0 ? "#7CFF95" : "#3DCF5A";
-  const grid: PixelGrid = [
-    [null, null, A, A, A, A, null, null, null, null, null, null, null, null, null, null],
-    [null, A, B, B, B, B, A, null, null, null, null, null, null, null, null, null],
-    [A, B, B, A, A, B, B, A, null, A, A, null, null, null, null, null],
-    [A, B, A, B, B, A, B, A, A, B, B, A, null, null, null, null],
-    [A, B, A, B, B, A, B, B, B, B, A, B, A, null, null, null],
-    [null, A, B, A, A, B, B, A, A, B, B, B, A, null, null, null],
-    [null, null, A, B, B, B, A, null, null, A, B, A, null, null, null, null],
-    [null, null, null, A, A, A, null, null, null, null, A, null, null, null, null, null],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-    ],
-  ];
+  // Goo puddle: deep rim, mid body, glossy highlight + bubble (wobbles by frame)
+  const D = "#145228"; // deep rim
+  const A = frame % 2 === 0 ? "#2AAE48" : "#249A40"; // body
+  const B = frame % 2 === 0 ? "#3DCF5A" : "#36BE52"; // mid
+  const C = frame % 2 === 0 ? "#7CFF95" : "#6AE888"; // gloss
+  const H = "#C8FFD4"; // bright highlight
+  const _ = null;
+
+  const grid: PixelGrid =
+    frame % 2 === 0
+      ? [
+          [_, _, _, _, D, D, D, D, D, D, _, _, _, _, _, _],
+          [_, _, _, D, A, B, B, B, B, A, D, _, _, _, _, _],
+          [_, _, D, A, B, C, C, B, B, B, A, D, D, _, _, _],
+          [_, D, A, B, C, H, C, B, B, B, B, A, A, D, _, _],
+          [_, D, A, B, C, C, B, B, B, B, B, B, A, D, _, _],
+          [D, A, B, B, B, B, B, B, B, B, B, B, B, A, D, _],
+          [D, A, B, B, B, B, B, B, B, B, C, B, B, A, D, _],
+          [D, A, B, B, B, B, B, B, B, B, B, B, B, A, D, _],
+          [D, A, A, B, B, B, B, B, B, B, B, B, A, A, D, _],
+          [_, D, A, A, B, B, B, B, B, B, B, A, A, D, _, _],
+          [_, D, A, A, A, B, B, B, B, A, A, A, D, _, _, _],
+          [_, _, D, A, A, A, A, A, A, A, A, D, _, _, _, _],
+          [_, _, _, D, D, A, A, A, A, D, D, _, _, D, _, _],
+          [_, _, _, _, _, D, D, D, D, _, _, _, D, A, D, _],
+          [_, _, _, _, _, _, _, _, _, _, _, _, _, D, _, _],
+          [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+        ]
+      : [
+          [_, _, _, _, _, D, D, D, D, D, _, _, _, _, _, _],
+          [_, _, _, D, D, A, B, B, B, A, D, _, _, _, _, _],
+          [_, _, D, A, B, B, C, C, B, B, A, D, _, _, _, _],
+          [_, D, A, B, B, C, H, C, B, B, B, A, D, D, _, _],
+          [_, D, A, B, B, C, C, B, B, B, B, B, A, D, _, _],
+          [D, A, B, B, B, B, B, B, B, B, B, B, B, A, D, _],
+          [D, A, B, B, B, B, B, B, B, C, B, B, B, A, D, _],
+          [D, A, B, B, B, B, B, B, B, B, B, B, B, A, D, _],
+          [D, A, A, B, B, B, B, B, B, B, B, B, A, A, D, _],
+          [_, D, A, A, B, B, B, B, B, B, B, A, A, D, _, _],
+          [_, _, D, A, A, B, B, B, B, A, A, A, D, _, _, _],
+          [_, _, D, A, A, A, A, A, A, A, A, D, _, _, _, _],
+          [_, _, _, D, A, A, A, A, A, D, D, _, _, _, D, _],
+          [_, _, _, _, D, D, D, D, D, _, _, _, _, D, A, D],
+          [_, _, _, _, _, _, _, _, _, _, _, _, _, _, D, _],
+          [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
+        ];
   return bakeSprite(grid);
 }
 

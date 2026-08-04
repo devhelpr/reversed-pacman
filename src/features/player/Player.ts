@@ -109,6 +109,9 @@ export class Player extends MovableEntity {
         this.animTimer = 0;
         this.animFrame = (this.animFrame + 1) % 2;
       }
+    } else {
+      this.animTimer = 0;
+      this.animFrame = 0;
     }
     return arrived;
   }

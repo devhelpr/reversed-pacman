@@ -1,11 +1,17 @@
 /** Static legend describing maze tiles and hazards. */
 
+import { createSlimeSprite } from "../../core/render/Sprites";
+
 export interface LegendItem {
   id: string;
   swatchClass: string;
   label: string;
   detail: string;
+  /** When set, legend uses this pixel sprite instead of a CSS swatch. */
+  spriteUrl?: string;
 }
+
+const slimeSpriteUrl = createSlimeSprite(0).toDataURL();
 
 export const LEGEND_ITEMS: LegendItem[] = [
   {
@@ -49,6 +55,7 @@ export const LEGEND_ITEMS: LegendItem[] = [
     swatchClass: "swatch-slime",
     label: "Slime",
     detail: "Slows you while you stand on it",
+    spriteUrl: slimeSpriteUrl,
   },
   {
     id: "shock",
@@ -83,17 +90,20 @@ export const LEGEND_ITEMS: LegendItem[] = [
 ];
 
 export function legendListHtml(): string {
-  return LEGEND_ITEMS.map(
-    (item) => `
+  return LEGEND_ITEMS.map((item) => {
+    const swatch = item.spriteUrl
+      ? `<img class="legend-swatch legend-swatch-sprite" src="${item.spriteUrl}" alt="" width="16" height="16" aria-hidden="true" />`
+      : `<span class="legend-swatch ${item.swatchClass}" aria-hidden="true"></span>`;
+    return `
       <li class="legend-item">
-        <span class="legend-swatch ${item.swatchClass}" aria-hidden="true"></span>
+        ${swatch}
         <span class="legend-text">
           <strong>${item.label}</strong>
           <span>${item.detail}</span>
         </span>
       </li>
-    `,
-  ).join("");
+    `;
+  }).join("");
 }
 
 export function createLegend(parent: HTMLElement): void {
