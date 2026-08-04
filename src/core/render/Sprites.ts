@@ -1,99 +1,146 @@
 import type { Direction } from "../types";
-import { bakeSprite, flipGridX, type Pixel, type PixelGrid } from "./PixelArt";
+import { bakeSprite, flipGridX, scaleGrid2x, type PixelGrid } from "./PixelArt";
 
-// Robot — lean C64-style chassis (limited palette, crisp silhouette)
-const K = "#7A8490"; // metal shade
-const B = "#A8B0B8"; // metal mid
-const D = "#0A0810"; // outline
-const L = "#3DFFB5"; // LED
-const A = "#F0B429"; // amber
-const V = "#1A2430"; // visor
+// Robot palette
+const K = "#6A7480";
+const B = "#B0B8C0";
+const M = "#D0D6DC";
+const D = "#0A0810";
+const L = "#3DFFB5";
+const A = "#F0B429";
+const V = "#152028";
+const G = "#1ECF8A";
 
-const _ = null;
+/** Parse fixed-width art (`.` = empty). Every row must be the same length. */
+function art(rows: string[], map: Record<string, string>): PixelGrid {
+  const w = rows[0]?.length ?? 0;
+  return rows.map((row) => {
+    if (row.length !== w) {
+      throw new Error(`Art row length ${row.length} !== ${w}: ${row}`);
+    }
+    return Array.from(row, (ch) => (ch === "." ? null : (map[ch] ?? null)));
+  });
+}
 
-/** Slim 14×14 robot — narrow torso, clear head/legs (no pear shape). */
+const RMAP: Record<string, string> = { K, B, M, D, L, A, V, G };
+
+function robotLegs(step: 0 | 1): string[] {
+  return step === 0
+    ? [
+        "..........KKKK......KKKK......",
+        "..........KKKK......KKKK......",
+        "..........DDDD......DDDD......",
+        "..........DDDD......DDDD......",
+      ]
+    : [
+        "......KKKK..............KKKK..",
+        "......KKKK..............KKKK..",
+        "......DDDD..............DDDD..",
+        "......DDDD..............DDDD..",
+      ];
+}
+
+function trim28(rows: string[]): string[] {
+  return rows.map((r) => r.slice(0, 28));
+}
+
 function robotRight(step: 0 | 1): PixelGrid {
-  const legs: Pixel[] =
-    step === 0
-      ? [_, _, _, K, K, _, _, _, _, _, K, K, _, _]
-      : [_, _, K, K, _, _, _, _, _, K, K, _, _, _];
-  const shoes: Pixel[] =
-    step === 0
-      ? [_, _, _, D, D, _, _, _, _, _, D, D, _, _]
-      : [_, _, D, D, _, _, _, _, _, D, D, _, _, _];
-
-  return [
-    [_, _, _, _, _, _, A, _, _, _, _, _, _, _],
-    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
-    [_, _, _, _, _, K, V, L, K, _, _, _, _, _],
-    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
-    [_, _, _, _, _, _, K, K, _, _, _, _, _, _],
-    [_, _, _, _, K, B, B, B, B, K, _, _, _, _],
-    [_, _, _, _, K, B, A, A, B, K, _, _, _, _],
-    [_, _, _, _, K, B, B, B, B, K, _, _, _, _],
-    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
-    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
-    [_, _, _, _, K, K, _, _, K, K, _, _, _, _],
-    legs,
-    shoes,
-    [_, _, _, _, _, _, _, _, _, _, _, _, _, _],
-  ];
+  return art(
+    trim28([
+      "..............AA..............",
+      "..............AA..............",
+      "............KKMMKK............",
+      "............KMMMMK............",
+      "............KVLLVK............",
+      "............KVLLVK............",
+      "............KMMMMK............",
+      "............KMMMMK............",
+      ".............KKKK.............",
+      ".............KKKK.............",
+      "..........KKMBBBBMKK..........",
+      "..........KMBBBBBBMK..........",
+      "..........KMBBAABBMK..........",
+      "..........KMBBAABBMK..........",
+      "..........KMBBBBBBMK..........",
+      "..........KKMBBBBMKK..........",
+      "...........KKBBBBKK...........",
+      "...........KKBBBBKK...........",
+      "...........KKBBBBKK...........",
+      "...........KKBBBBKK...........",
+      "..........KKKK..KKKK..........",
+      "..........KKKK..KKKK..........",
+      ...robotLegs(step),
+      "..............................",
+      "..............................",
+    ]),
+    RMAP,
+  );
 }
 
 function robotUp(step: 0 | 1): PixelGrid {
-  const legs: Pixel[] =
-    step === 0
-      ? [_, _, _, K, K, _, _, _, _, _, K, K, _, _]
-      : [_, _, K, K, _, _, _, _, _, K, K, _, _, _];
-  const shoes: Pixel[] =
-    step === 0
-      ? [_, _, _, D, D, _, _, _, _, _, D, D, _, _]
-      : [_, _, D, D, _, _, _, _, _, D, D, _, _, _];
-
-  return [
-    [_, _, _, _, _, _, A, _, _, _, _, _, _, _],
-    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
-    [_, _, _, _, _, K, V, V, K, _, _, _, _, _],
-    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
-    [_, _, _, _, _, _, K, K, _, _, _, _, _, _],
-    [_, _, _, _, K, B, B, B, B, K, _, _, _, _],
-    [_, _, _, _, K, B, A, A, B, K, _, _, _, _],
-    [_, _, _, _, K, B, B, B, B, K, _, _, _, _],
-    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
-    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
-    [_, _, _, _, K, K, _, _, K, K, _, _, _, _],
-    legs,
-    shoes,
-    [_, _, _, _, _, _, _, _, _, _, _, _, _, _],
-  ];
+  return art(
+    trim28([
+      "..............AA..............",
+      "..............AA..............",
+      "............KKMMKK............",
+      "............KMMMMK............",
+      "............KVVVVK............",
+      "............KVVVVK............",
+      "............KMMMMK............",
+      "............KMMMMK............",
+      ".............KKKK.............",
+      ".............KKKK.............",
+      "..........KKMBBBBMKK..........",
+      "..........KMBBBBBBMK..........",
+      "..........KMBBAABBMK..........",
+      "..........KMBBAABBMK..........",
+      "..........KMBBBBBBMK..........",
+      "..........KKMBBBBMKK..........",
+      "...........KKBBBBKK...........",
+      "...........KKBBBBKK...........",
+      "...........KKBBBBKK...........",
+      "...........KKBBBBKK...........",
+      "..........KKKK..KKKK..........",
+      "..........KKKK..KKKK..........",
+      ...robotLegs(step),
+      "..............................",
+      "..............................",
+    ]),
+    RMAP,
+  );
 }
 
 function robotDown(step: 0 | 1): PixelGrid {
-  const legs: Pixel[] =
-    step === 0
-      ? [_, _, _, K, K, _, _, _, _, _, K, K, _, _]
-      : [_, _, K, K, _, _, _, _, _, K, K, _, _, _];
-  const shoes: Pixel[] =
-    step === 0
-      ? [_, _, _, D, D, _, _, _, _, _, D, D, _, _]
-      : [_, _, D, D, _, _, _, _, _, D, D, _, _, _];
-
-  return [
-    [_, _, _, _, _, _, A, _, _, _, _, _, _, _],
-    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
-    [_, _, _, _, _, K, L, D, L, K, _, _, _, _],
-    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
-    [_, _, _, _, _, _, K, K, _, _, _, _, _, _],
-    [_, _, _, _, K, B, B, B, B, K, _, _, _, _],
-    [_, _, _, _, K, B, A, A, B, K, _, _, _, _],
-    [_, _, _, _, K, B, B, B, B, K, _, _, _, _],
-    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
-    [_, _, _, _, _, K, B, B, K, _, _, _, _, _],
-    [_, _, _, _, K, K, _, _, K, K, _, _, _, _],
-    legs,
-    shoes,
-    [_, _, _, _, _, _, _, _, _, _, _, _, _, _],
-  ];
+  return art(
+    trim28([
+      "..............AA..............",
+      "..............AA..............",
+      "............KKMMKK............",
+      "............KMMMMK............",
+      "............KMLDLMK...........",
+      "............KMGLGLK...........",
+      "............KMMMMK............",
+      "............KMMMMK............",
+      ".............KKKK.............",
+      ".............KKKK.............",
+      "..........KKMBBBBMKK..........",
+      "..........KMBBBBBBMK..........",
+      "..........KMBBAABBMK..........",
+      "..........KMBBAABBMK..........",
+      "..........KMBBBBBBMK..........",
+      "..........KKMBBBBMKK..........",
+      "...........KKBBBBKK...........",
+      "...........KKBBBBKK...........",
+      "...........KKBBBBKK...........",
+      "...........KKBBBBKK...........",
+      "..........KKKK..KKKK..........",
+      "..........KKKK..KKKK..........",
+      ...robotLegs(step),
+      "..............................",
+      "..............................",
+    ]),
+    RMAP,
+  );
 }
 
 export type PlayerSpriteSet = {
@@ -127,7 +174,7 @@ export function playerSpriteFor(
   return frames[frameIndex % frames.length]!;
 }
 
-// --- Humans (maze runners) — slim C64-style figures ---
+// --- Humans (28×28) ---
 
 export type GhostPalette = {
   body: string;
@@ -150,46 +197,65 @@ function humanFrame(palette: GhostPalette, stepAlt: boolean, lookX: number): Pix
   const SD = SKIN_D;
   const EW = palette.eyeWhite ?? EYE_W;
   const PU = palette.pupil ?? PUPIL;
+  const Cd = palette.skirt;
 
-  // Pupils shift with facing; eyes stay compact (cols 5–8)
-  const eyeRow = (y: 0 | 1): Pixel[] => {
-    const row: Pixel[] = [_, _, _, _, SK, SK, SK, SK, SK, SK, _, _, _, _];
-    row[5] = EW;
-    row[6] = EW;
-    row[7] = EW;
-    row[8] = EW;
-    if (y === 1) {
-      const lp = lookX < 0 ? 5 : lookX > 0 ? 6 : 5;
-      const rp = lookX < 0 ? 7 : lookX > 0 ? 8 : 8;
-      row[lp] = PU;
-      row[rp] = PU;
-    }
-    return row;
+  const map: Record<string, string> = {
+    H,
+    S: SK,
+    d: SD,
+    C,
+    c: Cd,
+    E: EW,
+    P: PU,
+    X: D,
   };
 
-  const legs: Pixel[] = stepAlt
-    ? [_, _, C, C, _, _, _, _, _, C, C, _, _, _]
-    : [_, _, _, C, C, _, _, _, C, C, _, _, _, _];
-  const shoes: Pixel[] = stepAlt
-    ? [_, _, D, D, _, _, _, _, _, D, D, _, _, _]
-    : [_, _, _, D, D, _, _, _, D, D, _, _, _, _];
+  const pupils = lookX < 0 ? "PEEE" : lookX > 0 ? "EEEP" : "EPEP";
 
-  return [
-    [_, _, _, _, _, H, H, H, H, _, _, _, _, _],
-    [_, _, _, _, H, H, H, H, H, H, _, _, _, _],
-    [_, _, _, _, SK, SK, SK, SK, SK, SK, _, _, _, _],
-    eyeRow(0),
-    eyeRow(1),
-    [_, _, _, _, SK, SK, SD, SD, SK, SK, _, _, _, _],
-    [_, _, _, _, _, SK, SK, SK, SK, _, _, _, _, _],
-    [_, _, _, _, C, C, C, C, C, C, _, _, _, _],
-    [_, _, _, C, C, C, C, C, C, C, C, _, _, _],
-    [_, _, _, _, C, C, C, C, C, C, _, _, _, _],
-    [_, _, _, _, _, C, C, C, C, _, _, _, _, _],
-    legs,
-    shoes,
-    [_, _, _, _, _, _, _, _, _, _, _, _, _, _],
-  ];
+  const legs = stepAlt
+    ? [
+        "......CCCC..........CCCC......",
+        "......CCCC..........CCCC......",
+        "......XXXX..........XXXX......",
+        "......XXXX..........XXXX......",
+      ]
+    : [
+        "..........CCCC..CCCC..........",
+        "..........CCCC..CCCC..........",
+        "..........XXXX..XXXX..........",
+        "..........XXXX..XXXX..........",
+      ];
+
+  return art(
+    trim28([
+      "............HHHHHH............",
+      "...........HHHHHHHH...........",
+      "..........HHHHHHHHHH..........",
+      "..........SSSSSSSSSS..........",
+      "..........SSSSSSSSSS..........",
+      "..........SSEEEESS..........",
+      "..........SS" + pupils + "SS..........",
+      "..........SSddddSS..........",
+      "..........SSSSSSSSSS..........",
+      "...........SSSSSSSS...........",
+      "...........SSSSSSSS...........",
+      "..........CCCCCCCCCC..........",
+      ".........CCCCCCCCCCCC.........",
+      ".........CCCCccccCCCC.........",
+      ".........CCCCCCCCCCCC.........",
+      "..........CCCCCCCCCC..........",
+      "..........CCCCCCCCCC..........",
+      "...........CCCCCCCC...........",
+      "...........CCCCCCCC...........",
+      "............CCCCCC............",
+      "............CCCCCC............",
+      ...legs,
+      "..............................",
+      "..............................",
+      "..............................",
+    ]),
+    map,
+  );
 }
 
 export const GHOST_PALETTES: GhostPalette[] = [
@@ -221,43 +287,33 @@ export function ghostSpriteFor(
   return frames[base + step]!;
 }
 
-export function createDotSprite(): HTMLCanvasElement {
-  // Classic pellet — small, round, bright
-  const A = "#F0D878";
-  const B = "#FFF6C8";
-  const grid: PixelGrid = [
-    [_, A, A, _],
-    [A, B, A, A],
-    [A, A, A, A],
-    [_, A, A, _],
-  ];
-  return bakeSprite(grid);
+function bake2x(grid: PixelGrid): HTMLCanvasElement {
+  return bakeSprite(scaleGrid2x(grid));
 }
 
+export function createDotSprite(): HTMLCanvasElement {
+  const A = "#F0D878";
+  const B = "#FFF6C8";
+  return bake2x([
+    [null, A, A, null],
+    [A, B, A, A],
+    [A, A, A, A],
+    [null, A, A, null],
+  ]);
+}
+
+/** Wall fill — matches mid pipe shade so tile seams vanish. */
+export const WALL_FILL = "#6A8AB0";
+
 export function createFloorPattern(): HTMLCanvasElement {
-  // Dark corridor void — keeps metal walls readable
   const F = "#0A0C12";
-  const S = "#12151E";
-  const grid: PixelGrid = Array.from({ length: 16 }, (_, y) =>
-    Array.from({ length: 16 }, (_, x) => (x === 0 || y === 0 ? S : F)),
-  );
+  const grid: PixelGrid = Array.from({ length: 32 }, () => Array.from({ length: 32 }, () => F));
   return bakeSprite(grid);
 }
 
 export function createWallPattern(): HTMLCanvasElement {
-  // Smooth filled steel core — lighter mid-tones so pipes sit on metal, not a dark void
-  const H = "#6A8AB0";
-  const M = "#5A7A9E";
-  const L = "#4E6E92";
-  const grid: PixelGrid = Array.from({ length: 16 }, (_, y) =>
-    Array.from({ length: 16 }, (_, x) => {
-      // Soft vertical bevel, no speckles
-      if (y <= 1) return H;
-      if (y >= 14) return L;
-      if (x <= 1) return H;
-      if (x >= 14) return L;
-      return M;
-    }),
+  const grid: PixelGrid = Array.from({ length: 32 }, () =>
+    Array.from({ length: 32 }, () => WALL_FILL),
   );
   return bakeSprite(grid);
 }
@@ -265,7 +321,7 @@ export function createWallPattern(): HTMLCanvasElement {
 export function createExitSprite(frame: number): HTMLCanvasElement {
   const A = frame % 2 === 0 ? "#3DFFB5" : "#1ECF8A";
   const B = frame % 2 === 0 ? "#1ECF8A" : "#3DFFB5";
-  const grid: PixelGrid = [
+  return bake2x([
     [null, A, A, A, A, A, A, null],
     [A, B, B, B, B, B, B, A],
     [A, B, A, A, A, A, B, A],
@@ -274,14 +330,13 @@ export function createExitSprite(frame: number): HTMLCanvasElement {
     [A, B, A, A, A, A, B, A],
     [A, B, B, B, B, B, B, A],
     [null, A, A, A, A, A, A, null],
-  ];
-  return bakeSprite(grid);
+  ]);
 }
 
 export function createBaitSprite(frame: number): HTMLCanvasElement {
   const A = frame % 2 === 0 ? "#4B8CFF" : "#7AA8FF";
   const B = frame % 2 === 0 ? "#7AA8FF" : "#B8CCFF";
-  const grid: PixelGrid = [
+  return bake2x([
     [null, null, A, A, null, null, null, null],
     [null, A, B, B, A, null, null, null],
     [A, B, B, B, B, A, null, null],
@@ -290,8 +345,7 @@ export function createBaitSprite(frame: number): HTMLCanvasElement {
     [null, null, A, A, null, null, null, null],
     [null, null, null, null, null, null, null, null],
     [null, null, null, null, null, null, null, null],
-  ];
-  return bakeSprite(grid);
+  ]);
 }
 
 export function createTrapdoorSprite(open: boolean): HTMLCanvasElement {
@@ -299,121 +353,119 @@ export function createTrapdoorSprite(open: boolean): HTMLCanvasElement {
     const R = "#E24A4A";
     const A = "#F0B429";
     const V = "#2A1830";
-    const D = "#140C18";
+    const Dd = "#140C18";
     const grid: PixelGrid = [
       [A, R, A, R, A, R, A, R, A, R, A, R, A, R, A, R],
       [R, V, V, V, V, V, V, V, V, V, V, V, V, V, V, A],
-      [A, V, D, D, D, D, D, D, D, D, D, D, D, D, V, R],
-      [R, V, D, V, D, D, D, D, D, D, D, D, V, D, V, A],
-      [A, V, D, D, V, D, D, D, D, D, D, V, D, D, V, R],
-      [R, V, D, D, D, V, D, D, D, D, V, D, D, D, V, A],
-      [A, V, D, D, D, D, V, D, D, V, D, D, D, D, V, R],
-      [R, V, D, D, D, D, D, V, V, D, D, D, D, D, V, A],
-      [A, V, D, D, D, D, D, V, V, D, D, D, D, D, V, R],
-      [R, V, D, D, D, D, V, D, D, V, D, D, D, D, V, A],
-      [A, V, D, D, D, V, D, D, D, D, V, D, D, D, V, R],
-      [R, V, D, D, V, D, D, D, D, D, D, V, D, D, V, A],
-      [A, V, D, V, D, D, D, D, D, D, D, D, V, D, V, R],
-      [R, V, D, D, D, D, D, D, D, D, D, D, D, D, V, A],
+      [A, V, Dd, Dd, Dd, Dd, Dd, Dd, Dd, Dd, Dd, Dd, Dd, Dd, V, R],
+      [R, V, Dd, V, Dd, Dd, Dd, Dd, Dd, Dd, Dd, Dd, V, Dd, V, A],
+      [A, V, Dd, Dd, V, Dd, Dd, Dd, Dd, Dd, Dd, V, Dd, Dd, V, R],
+      [R, V, Dd, Dd, Dd, V, Dd, Dd, Dd, Dd, V, Dd, Dd, Dd, V, A],
+      [A, V, Dd, Dd, Dd, Dd, V, Dd, Dd, V, Dd, Dd, Dd, Dd, V, R],
+      [R, V, Dd, Dd, Dd, Dd, Dd, V, V, Dd, Dd, Dd, Dd, Dd, V, A],
+      [A, V, Dd, Dd, Dd, Dd, Dd, V, V, Dd, Dd, Dd, Dd, Dd, V, R],
+      [R, V, Dd, Dd, Dd, Dd, V, Dd, Dd, V, Dd, Dd, Dd, Dd, V, A],
+      [A, V, Dd, Dd, Dd, V, Dd, Dd, Dd, Dd, V, Dd, Dd, Dd, V, R],
+      [R, V, Dd, Dd, V, Dd, Dd, Dd, Dd, Dd, Dd, V, Dd, Dd, V, A],
+      [A, V, Dd, V, Dd, Dd, Dd, Dd, Dd, Dd, Dd, Dd, V, Dd, V, R],
+      [R, V, Dd, Dd, Dd, Dd, Dd, Dd, Dd, Dd, Dd, Dd, Dd, Dd, V, A],
       [A, V, V, V, V, V, V, V, V, V, V, V, V, V, V, R],
       [R, A, R, A, R, A, R, A, R, A, R, A, R, A, R, A],
     ];
-    return bakeSprite(grid);
+    return bake2x(grid);
   }
 
-  const L = "#E0B860";
-  const M = "#B88830";
-  const K = "#6A4A18";
+  const L2 = "#E0B860";
+  const M2 = "#B88830";
+  const K2 = "#6A4A18";
   const grid: PixelGrid = [
-    [K, L, L, L, L, L, L, L, L, L, L, L, L, L, L, K],
-    [L, M, M, M, M, M, M, M, M, M, M, M, M, M, M, L],
-    [L, M, L, M, M, M, M, M, M, M, M, M, M, L, M, L],
-    [L, M, M, K, M, M, M, M, M, M, M, M, K, M, M, L],
-    [L, M, M, M, K, M, M, L, L, M, M, K, M, M, M, L],
-    [L, M, M, M, M, K, M, L, L, M, K, M, M, M, M, L],
-    [L, M, M, M, M, M, K, M, M, K, M, M, M, M, M, L],
-    [L, M, M, M, L, L, M, K, K, M, L, L, M, M, M, L],
-    [L, M, M, M, L, L, M, K, K, M, L, L, M, M, M, L],
-    [L, M, M, M, M, M, K, M, M, K, M, M, M, M, M, L],
-    [L, M, M, M, M, K, M, L, L, M, K, M, M, M, M, L],
-    [L, M, M, M, K, M, M, L, L, M, M, K, M, M, M, L],
-    [L, M, M, K, M, M, M, M, M, M, M, M, K, M, M, L],
-    [L, M, L, M, M, M, M, M, M, M, M, M, M, L, M, L],
-    [L, M, M, M, M, M, M, M, M, M, M, M, M, M, M, L],
-    [K, L, L, L, L, L, L, L, L, L, L, L, L, L, L, K],
+    [K2, L2, L2, L2, L2, L2, L2, L2, L2, L2, L2, L2, L2, L2, L2, K2],
+    [L2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, L2],
+    [L2, M2, L2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, L2, M2, L2],
+    [L2, M2, M2, K2, M2, M2, M2, M2, M2, M2, M2, M2, K2, M2, M2, L2],
+    [L2, M2, M2, M2, K2, M2, M2, L2, L2, M2, M2, K2, M2, M2, M2, L2],
+    [L2, M2, M2, M2, M2, K2, M2, L2, L2, M2, K2, M2, M2, M2, M2, L2],
+    [L2, M2, M2, M2, M2, M2, K2, M2, M2, K2, M2, M2, M2, M2, M2, L2],
+    [L2, M2, M2, M2, L2, L2, M2, K2, K2, M2, L2, L2, M2, M2, M2, L2],
+    [L2, M2, M2, M2, L2, L2, M2, K2, K2, M2, L2, L2, M2, M2, M2, L2],
+    [L2, M2, M2, M2, M2, M2, K2, M2, M2, K2, M2, M2, M2, M2, M2, L2],
+    [L2, M2, M2, M2, M2, K2, M2, L2, L2, M2, K2, M2, M2, M2, M2, L2],
+    [L2, M2, M2, M2, K2, M2, M2, L2, L2, M2, M2, K2, M2, M2, M2, L2],
+    [L2, M2, M2, K2, M2, M2, M2, M2, M2, M2, M2, M2, K2, M2, M2, L2],
+    [L2, M2, L2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, L2, M2, L2],
+    [L2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, L2],
+    [K2, L2, L2, L2, L2, L2, L2, L2, L2, L2, L2, L2, L2, L2, L2, K2],
   ];
-  return bakeSprite(grid);
+  return bake2x(grid);
 }
 
 export function createSlimeSprite(frame: number): HTMLCanvasElement {
-  // Goo puddle: deep rim, mid body, glossy highlight + bubble (wobbles by frame)
-  const D = "#145228"; // deep rim
-  const A = frame % 2 === 0 ? "#2AAE48" : "#249A40"; // body
-  const B = frame % 2 === 0 ? "#3DCF5A" : "#36BE52"; // mid
-  const C = frame % 2 === 0 ? "#7CFF95" : "#6AE888"; // gloss
-  const H = "#C8FFD4"; // bright highlight
+  const Dd = "#145228";
+  const A = frame % 2 === 0 ? "#2AAE48" : "#249A40";
+  const B = frame % 2 === 0 ? "#3DCF5A" : "#36BE52";
+  const C = frame % 2 === 0 ? "#7CFF95" : "#6AE888";
+  const H = "#C8FFD4";
   const _ = null;
 
   const grid: PixelGrid =
     frame % 2 === 0
       ? [
-          [_, _, _, _, D, D, D, D, D, D, _, _, _, _, _, _],
-          [_, _, _, D, A, B, B, B, B, A, D, _, _, _, _, _],
-          [_, _, D, A, B, C, C, B, B, B, A, D, D, _, _, _],
-          [_, D, A, B, C, H, C, B, B, B, B, A, A, D, _, _],
-          [_, D, A, B, C, C, B, B, B, B, B, B, A, D, _, _],
-          [D, A, B, B, B, B, B, B, B, B, B, B, B, A, D, _],
-          [D, A, B, B, B, B, B, B, B, B, C, B, B, A, D, _],
-          [D, A, B, B, B, B, B, B, B, B, B, B, B, A, D, _],
-          [D, A, A, B, B, B, B, B, B, B, B, B, A, A, D, _],
-          [_, D, A, A, B, B, B, B, B, B, B, A, A, D, _, _],
-          [_, D, A, A, A, B, B, B, B, A, A, A, D, _, _, _],
-          [_, _, D, A, A, A, A, A, A, A, A, D, _, _, _, _],
-          [_, _, _, D, D, A, A, A, A, D, D, _, _, D, _, _],
-          [_, _, _, _, _, D, D, D, D, _, _, _, D, A, D, _],
-          [_, _, _, _, _, _, _, _, _, _, _, _, _, D, _, _],
+          [_, _, _, _, Dd, Dd, Dd, Dd, Dd, Dd, _, _, _, _, _, _],
+          [_, _, _, Dd, A, B, B, B, B, A, Dd, _, _, _, _, _],
+          [_, _, Dd, A, B, C, C, B, B, B, A, Dd, Dd, _, _, _],
+          [_, Dd, A, B, C, H, C, B, B, B, B, A, A, Dd, _, _],
+          [_, Dd, A, B, C, C, B, B, B, B, B, B, A, Dd, _, _],
+          [Dd, A, B, B, B, B, B, B, B, B, B, B, B, A, Dd, _],
+          [Dd, A, B, B, B, B, B, B, B, B, C, B, B, A, Dd, _],
+          [Dd, A, B, B, B, B, B, B, B, B, B, B, B, A, Dd, _],
+          [Dd, A, A, B, B, B, B, B, B, B, B, B, A, A, Dd, _],
+          [_, Dd, A, A, B, B, B, B, B, B, B, A, A, Dd, _, _],
+          [_, Dd, A, A, A, B, B, B, B, A, A, A, Dd, _, _, _],
+          [_, _, Dd, A, A, A, A, A, A, A, A, Dd, _, _, _, _],
+          [_, _, _, Dd, Dd, A, A, A, A, Dd, Dd, _, _, Dd, _, _],
+          [_, _, _, _, _, Dd, Dd, Dd, Dd, _, _, _, Dd, A, Dd, _],
+          [_, _, _, _, _, _, _, _, _, _, _, _, _, Dd, _, _],
           [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
         ]
       : [
-          [_, _, _, _, _, D, D, D, D, D, _, _, _, _, _, _],
-          [_, _, _, D, D, A, B, B, B, A, D, _, _, _, _, _],
-          [_, _, D, A, B, B, C, C, B, B, A, D, _, _, _, _],
-          [_, D, A, B, B, C, H, C, B, B, B, A, D, D, _, _],
-          [_, D, A, B, B, C, C, B, B, B, B, B, A, D, _, _],
-          [D, A, B, B, B, B, B, B, B, B, B, B, B, A, D, _],
-          [D, A, B, B, B, B, B, B, B, C, B, B, B, A, D, _],
-          [D, A, B, B, B, B, B, B, B, B, B, B, B, A, D, _],
-          [D, A, A, B, B, B, B, B, B, B, B, B, A, A, D, _],
-          [_, D, A, A, B, B, B, B, B, B, B, A, A, D, _, _],
-          [_, _, D, A, A, B, B, B, B, A, A, A, D, _, _, _],
-          [_, _, D, A, A, A, A, A, A, A, A, D, _, _, _, _],
-          [_, _, _, D, A, A, A, A, A, D, D, _, _, _, D, _],
-          [_, _, _, _, D, D, D, D, D, _, _, _, _, D, A, D],
-          [_, _, _, _, _, _, _, _, _, _, _, _, _, _, D, _],
+          [_, _, _, _, _, Dd, Dd, Dd, Dd, Dd, _, _, _, _, _, _],
+          [_, _, _, Dd, Dd, A, B, B, B, A, Dd, _, _, _, _, _],
+          [_, _, Dd, A, B, B, C, C, B, B, A, Dd, _, _, _, _],
+          [_, Dd, A, B, B, C, H, C, B, B, B, A, Dd, Dd, _, _],
+          [_, Dd, A, B, B, C, C, B, B, B, B, B, A, Dd, _, _],
+          [Dd, A, B, B, B, B, B, B, B, B, B, B, B, A, Dd, _],
+          [Dd, A, B, B, B, B, B, B, B, C, B, B, B, A, Dd, _],
+          [Dd, A, B, B, B, B, B, B, B, B, B, B, B, A, Dd, _],
+          [Dd, A, A, B, B, B, B, B, B, B, B, B, A, A, Dd, _],
+          [_, Dd, A, A, B, B, B, B, B, B, B, A, A, Dd, _, _],
+          [_, _, Dd, A, A, B, B, B, B, A, A, A, Dd, _, _, _],
+          [_, _, Dd, A, A, A, A, A, A, A, A, Dd, _, _, _, _],
+          [_, _, _, Dd, A, A, A, A, A, Dd, Dd, _, _, _, Dd, _],
+          [_, _, _, _, Dd, Dd, Dd, Dd, Dd, _, _, _, _, Dd, A, Dd],
+          [_, _, _, _, _, _, _, _, _, _, _, _, _, _, Dd, _],
           [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
         ];
-  return bakeSprite(grid);
+  return bake2x(grid);
 }
 
 export function createShockSprite(live: boolean): HTMLCanvasElement {
   if (!live) {
-    const G = "#3A3A3A";
-    const grid: PixelGrid = [
-      [G, null, G, null, G, null, G, null],
-      [null, G, null, G, null, G, null, G],
-      [G, null, G, null, G, null, G, null],
-      [null, G, null, G, null, G, null, G],
-      [G, null, G, null, G, null, G, null],
-      [null, G, null, G, null, G, null, G],
-      [G, null, G, null, G, null, G, null],
-      [null, G, null, G, null, G, null, G],
-    ];
-    return bakeSprite(grid);
+    const Gg = "#3A3A3A";
+    return bake2x([
+      [Gg, null, Gg, null, Gg, null, Gg, null],
+      [null, Gg, null, Gg, null, Gg, null, Gg],
+      [Gg, null, Gg, null, Gg, null, Gg, null],
+      [null, Gg, null, Gg, null, Gg, null, Gg],
+      [Gg, null, Gg, null, Gg, null, Gg, null],
+      [null, Gg, null, Gg, null, Gg, null, Gg],
+      [Gg, null, Gg, null, Gg, null, Gg, null],
+      [null, Gg, null, Gg, null, Gg, null, Gg],
+    ]);
   }
 
   const Y = "#F0B429";
   const C = "#7AD4FF";
-  const grid: PixelGrid = [
+  return bake2x([
     [null, Y, null, C, null, Y, null, C],
     [Y, C, Y, null, C, Y, C, null],
     [null, Y, C, Y, null, C, null, Y],
@@ -422,14 +474,13 @@ export function createShockSprite(live: boolean): HTMLCanvasElement {
     [Y, null, C, null, Y, C, Y, null],
     [null, Y, null, C, null, Y, C, Y],
     [C, null, Y, null, C, null, Y, null],
-  ];
-  return bakeSprite(grid);
+  ]);
 }
 
 export function createRiftSprite(frame: number): HTMLCanvasElement {
   const A = frame % 2 === 0 ? "#C45AD8" : "#8A30A8";
   const B = frame % 2 === 0 ? "#E8A0F0" : "#C45AD8";
-  const grid: PixelGrid = [
+  return bake2x([
     [null, null, A, A, A, A, null, null],
     [null, A, B, B, B, B, A, null],
     [A, B, null, B, B, null, B, A],
@@ -438,15 +489,14 @@ export function createRiftSprite(frame: number): HTMLCanvasElement {
     [A, B, null, B, B, null, B, A],
     [null, A, B, B, B, B, A, null],
     [null, null, A, A, A, A, null, null],
-  ];
-  return bakeSprite(grid);
+  ]);
 }
 
 export function createBonusSprite(frame: number): HTMLCanvasElement {
   const A = frame % 2 === 0 ? "#F0B429" : "#FFE08A";
   const B = frame % 2 === 0 ? "#E28A1A" : "#F0B429";
   const C = "#FFF6C8";
-  const grid: PixelGrid = [
+  return bake2x([
     [null, null, null, A, A, null, null, null],
     [null, null, A, C, C, A, null, null],
     [null, A, C, A, A, C, A, null],
@@ -455,8 +505,7 @@ export function createBonusSprite(frame: number): HTMLCanvasElement {
     [null, A, C, A, A, C, A, null],
     [null, null, A, C, C, A, null, null],
     [null, null, null, A, A, null, null, null],
-  ];
-  return bakeSprite(grid);
+  ]);
 }
 
 export function createLiftSprite(dir: "up" | "down", frame: number): HTMLCanvasElement {
@@ -485,10 +534,9 @@ export function createLiftSprite(dir: "up" | "down", frame: number): HTMLCanvasE
           [null, null, C, C, C, C, null, null],
           [null, null, null, C, C, null, null, null],
         ];
-  return bakeSprite(arrow as PixelGrid);
+  return bake2x(arrow as PixelGrid);
 }
 
-/** Angry hunter look used while bait is active. */
 export const HUNTER_GHOST_PALETTE: GhostPalette = {
   body: "#F4EDE0",
   skirt: "#E24A4A",

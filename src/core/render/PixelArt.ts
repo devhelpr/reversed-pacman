@@ -43,6 +43,21 @@ export function bakeSprite(grid: PixelGrid): HTMLCanvasElement {
   return canvas;
 }
 
+/** Nearest-neighbor 2× scale for bumping sprite resolution. */
+export function scaleGrid2x(grid: PixelGrid): PixelGrid {
+  const out: PixelGrid = [];
+  for (const row of grid) {
+    const a: Pixel[] = [];
+    const b: Pixel[] = [];
+    for (const p of row) {
+      a.push(p, p);
+      b.push(p, p);
+    }
+    out.push(a, b);
+  }
+  return out;
+}
+
 /** Flip a grid horizontally for left-facing frames. */
 export function flipGridX(grid: PixelGrid): PixelGrid {
   return grid.map((row) => [...row].reverse());

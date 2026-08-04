@@ -74,8 +74,8 @@ export interface TrapVisualState {
   animPhase: number;
 }
 
-const TILE = 16;
-const SPRITE = 14;
+const TILE = 32;
+const SPRITE = 28;
 /** Prefer showing about this many tiles on the shorter viewport axis. */
 const TARGET_VISIBLE_TILES = 11;
 /** Start scrolling when the focus enters this many tiles of the viewport edge. */
@@ -289,21 +289,13 @@ export class CanvasRenderer {
 
         switch (tile) {
           case "dot":
-            ctx.drawImage(this.dotSprite, x + (tw - 5) / 2, y + (tw - 5) / 2);
+            this.drawCentered(ctx, this.dotSprite, x, y, tw);
             break;
           case "bait":
-            ctx.drawImage(
-              this.baitSprites[anim % this.baitSprites.length]!,
-              x + (tw - 8) / 2,
-              y + (tw - 8) / 2,
-            );
+            this.drawCentered(ctx, this.baitSprites[anim % this.baitSprites.length]!, x, y, tw);
             break;
           case "bonus":
-            ctx.drawImage(
-              this.bonusSprites[anim % this.bonusSprites.length]!,
-              x + (tw - 8) / 2,
-              y + (tw - 8) / 2,
-            );
+            this.drawCentered(ctx, this.bonusSprites[anim % this.bonusSprites.length]!, x, y, tw);
             break;
           case "trapdoor": {
             const openAmount = doorLookup.get(`${col},${row}`) ?? 0;
@@ -314,36 +306,26 @@ export class CanvasRenderer {
             ctx.drawImage(this.slimeSprites[anim % this.slimeSprites.length]!, x, y);
             break;
           case "shock":
-            ctx.drawImage(
-              traps.shocksLive ? this.shockLive : this.shockIdle,
-              x + (tw - 8) / 2,
-              y + (tw - 8) / 2,
-            );
+            this.drawCentered(ctx, traps.shocksLive ? this.shockLive : this.shockIdle, x, y, tw);
             break;
           case "rift":
-            ctx.drawImage(
-              this.riftSprites[anim % this.riftSprites.length]!,
-              x + (tw - 8) / 2,
-              y + (tw - 8) / 2,
-            );
+            this.drawCentered(ctx, this.riftSprites[anim % this.riftSprites.length]!, x, y, tw);
             break;
           case "liftUp":
-            ctx.drawImage(
-              this.liftUpSprites[anim % this.liftUpSprites.length]!,
-              x + (tw - 8) / 2,
-              y + (tw - 8) / 2,
-            );
+            this.drawCentered(ctx, this.liftUpSprites[anim % this.liftUpSprites.length]!, x, y, tw);
             break;
           case "liftDown":
-            ctx.drawImage(
+            this.drawCentered(
+              ctx,
               this.liftDownSprites[anim % this.liftDownSprites.length]!,
-              x + (tw - 8) / 2,
-              y + (tw - 8) / 2,
+              x,
+              y,
+              tw,
             );
             break;
           case "exit": {
             const sprite = this.exitSprites[Math.floor(this.exitFrame) % this.exitSprites.length]!;
-            ctx.drawImage(sprite, x + (tw - 8) / 2, y + (tw - 8) / 2);
+            this.drawCentered(ctx, sprite, x, y, tw);
             break;
           }
           default:
@@ -380,7 +362,7 @@ export class CanvasRenderer {
         if (actor.hunted && fall === 0 && lift === undefined) {
           ctx.fillStyle = "#4B8CFF66";
           ctx.beginPath();
-          ctx.arc(actor.worldPos.x * tw, actor.worldPos.y * tw, 9, 0, Math.PI * 2);
+          ctx.arc(actor.worldPos.x * tw, actor.worldPos.y * tw, 18, 0, Math.PI * 2);
           ctx.fill();
         }
 
@@ -391,7 +373,7 @@ export class CanvasRenderer {
           const tileX = Math.floor(actor.worldPos.x) * tw;
           const tileY = Math.floor(actor.worldPos.y) * tw;
           ctx.beginPath();
-          ctx.rect(tileX + 2, tileY + 2, tw - 4, tw - 4);
+          ctx.rect(tileX + 4, tileY + 4, tw - 8, tw - 8);
           ctx.clip();
           ctx.globalAlpha = 1 - fall * 0.35;
           ctx.drawImage(sprite, px, py, SPRITE * scale, SPRITE * scale);
@@ -443,6 +425,17 @@ export class CanvasRenderer {
       this.canvas.width,
       this.canvas.height,
     );
+  }
+
+  /** Center a sprite inside a tile. */
+  private drawCentered(
+    ctx: CanvasRenderingContext2D,
+    sprite: HTMLCanvasElement,
+    tileX: number,
+    tileY: number,
+    tw: number,
+  ): void {
+    ctx.drawImage(sprite, tileX + (tw - sprite.width) / 2, tileY + (tw - sprite.height) / 2);
   }
 
   /**
@@ -587,15 +580,29 @@ export class CanvasRenderer {
     }
   }
 
-  /** Tube cross-section — 0 wall-inner → 1 corridor-outer. */
+  /** Tube cross-section — continuous lerp, 0 wall-inner → 1 corridor-outer. */
   private pipeShade(u: number): string {
-    if (u < 0.12) return "#2A4060";
-    if (u < 0.3) return "#3A5880";
-    if (u < 0.48) return "#5A7A9E";
-    if (u < 0.65) return "#7A9CB8";
-    if (u < 0.8) return "#A8C4DC";
-    if (u < 0.92) return "#D0E4F4";
-    return "#F0F6FC";
+    const t = Math.min(1, Math.max(0, u));
+    // Stops match WALL_FILL mid so the core blends into the pipe
+    const stops: [number, [number, number, number]][] = [
+      [0.0, [74, 110, 142]], // #4A6E8E
+      [0.2, [90, 122, 154]], // #5A7A9A
+      [0.4, [106, 138, 176]], // #6A8AB0 = WALL_FILL
+      [0.55, [138, 170, 200]],
+      [0.7, [176, 204, 224]],
+      [0.85, [216, 232, 244]],
+      [1.0, [240, 246, 252]],
+    ];
+    let i = 0;
+    while (i < stops.length - 1 && t > stops[i + 1]![0]) i++;
+    const a = stops[i]!;
+    const b = stops[Math.min(i + 1, stops.length - 1)]!;
+    const span = b[0] - a[0] || 1;
+    const f = (t - a[0]) / span;
+    const r = Math.round(a[1][0] + (b[1][0] - a[1][0]) * f);
+    const g = Math.round(a[1][1] + (b[1][1] - a[1][1]) * f);
+    const bl = Math.round(a[1][2] + (b[1][2] - a[1][2]) * f);
+    return `rgb(${r},${g},${bl})`;
   }
 
   /** Horizontal shutter + flash while changing floors. */
