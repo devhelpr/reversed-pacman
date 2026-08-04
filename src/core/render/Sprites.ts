@@ -9,92 +9,89 @@ const L = "#3DFFB5"; // LED cyan-mint
 const A = "#F0B429"; // amber accent
 const V = "#2A3340"; // visor recess
 
-/** 14×14 robot — solid chassis; `step` alternates walking feet. */
+/** 14×14 robot — proportions match human sprites (small head, torso, walking legs). */
 function robotRight(step: 0 | 1): PixelGrid {
-  // step 0: left foot forward (toward facing), right back
-  // step 1: right foot forward, left back
+  // Same stride pattern as humans
   const legs: Pixel[] =
     step === 0
-      ? [null, null, null, K, K, null, null, null, null, K, null, null, null, null]
-      : [null, null, null, null, K, null, null, null, null, K, K, null, null, null];
+      ? [null, null, null, K, K, null, null, null, null, K, K, null, null, null]
+      : [null, null, K, K, null, null, null, null, K, K, null, null, null, null];
   const shoes: Pixel[] =
     step === 0
-      ? [null, null, null, D, D, D, null, null, null, D, D, null, null, null]
-      : [null, null, null, D, D, null, null, null, D, D, D, null, null, null];
+      ? [null, null, null, D, D, null, null, null, null, D, D, null, null, null]
+      : [null, null, D, D, null, null, null, null, D, D, null, null, null, null];
 
   return [
     [null, null, null, null, null, null, A, A, null, null, null, null, null, null],
-    [null, null, null, null, null, null, D, A, null, null, null, null, null, null],
-    [null, null, null, K, M, M, M, M, M, M, K, null, null, null],
-    [null, null, K, M, M, M, M, M, M, M, M, K, null, null],
-    [null, null, M, V, V, V, V, V, V, V, V, M, null, null],
-    [null, null, M, V, L, D, V, V, L, D, V, M, null, null],
-    [null, null, M, V, L, L, V, V, L, L, V, M, null, null],
-    [null, null, M, M, M, M, M, M, M, M, M, M, null, null],
-    [null, null, M, M, K, K, K, K, K, K, M, M, null, null],
-    [null, null, K, M, M, M, M, M, M, M, M, K, null, null],
-    [null, null, null, K, M, A, A, A, A, M, K, null, null, null],
-    [null, null, null, null, K, M, M, M, M, K, null, null, null, null],
+    [null, null, null, null, null, K, M, M, M, K, null, null, null, null],
+    [null, null, null, null, K, M, V, V, V, M, K, null, null, null],
+    [null, null, null, null, K, M, V, L, D, M, K, null, null, null],
+    [null, null, null, null, K, M, V, L, L, M, K, null, null, null],
+    [null, null, null, null, null, K, M, M, M, K, null, null, null, null],
+    [null, null, null, null, K, M, M, M, M, M, K, null, null, null],
+    [null, null, null, K, M, M, M, M, M, M, M, K, null, null],
+    [null, null, null, K, M, M, A, A, A, M, M, K, null, null],
+    [null, null, null, K, M, M, M, M, M, M, M, K, null, null],
+    [null, null, null, null, K, M, M, M, M, M, K, null, null, null],
     legs,
     shoes,
+    [null, null, null, null, null, null, null, null, null, null, null, null, null, null],
   ];
 }
 
 function robotUp(step: 0 | 1): PixelGrid {
-  // From behind: alternate which foot strides outward
   const legs: Pixel[] =
     step === 0
-      ? [null, null, null, K, K, null, null, null, null, K, null, null, null, null]
-      : [null, null, null, null, K, null, null, null, null, K, K, null, null, null];
+      ? [null, null, null, K, K, null, null, null, null, K, K, null, null, null]
+      : [null, null, K, K, null, null, null, null, K, K, null, null, null, null];
   const shoes: Pixel[] =
     step === 0
-      ? [null, null, null, D, D, D, null, null, null, D, D, null, null, null]
-      : [null, null, null, D, D, null, null, null, D, D, D, null, null, null];
+      ? [null, null, null, D, D, null, null, null, null, D, D, null, null, null]
+      : [null, null, D, D, null, null, null, null, D, D, null, null, null, null];
 
   return [
     [null, null, null, null, null, null, A, A, null, null, null, null, null, null],
-    [null, null, null, null, null, null, A, D, null, null, null, null, null, null],
-    [null, null, null, K, M, M, M, M, M, M, K, null, null, null],
-    [null, null, K, M, M, M, M, M, M, M, M, K, null, null],
-    [null, null, M, V, L, D, V, V, L, D, V, M, null, null],
-    [null, null, M, V, L, L, V, V, L, L, V, M, null, null],
-    [null, null, M, V, V, V, V, V, V, V, V, M, null, null],
-    [null, null, M, M, M, M, M, M, M, M, M, M, null, null],
-    [null, null, M, M, K, K, K, K, K, K, M, M, null, null],
-    [null, null, K, M, M, M, M, M, M, M, M, K, null, null],
-    [null, null, null, K, M, A, A, A, A, M, K, null, null, null],
-    [null, null, null, null, K, M, M, M, M, K, null, null, null, null],
+    [null, null, null, null, null, K, M, M, M, K, null, null, null, null],
+    [null, null, null, null, K, M, V, L, D, M, K, null, null, null],
+    [null, null, null, null, K, M, V, L, L, M, K, null, null, null],
+    [null, null, null, null, K, M, V, V, V, M, K, null, null, null],
+    [null, null, null, null, null, K, M, M, M, K, null, null, null, null],
+    [null, null, null, null, K, M, M, M, M, M, K, null, null, null],
+    [null, null, null, K, M, M, M, M, M, M, M, K, null, null],
+    [null, null, null, K, M, M, A, A, A, M, M, K, null, null],
+    [null, null, null, K, M, M, M, M, M, M, M, K, null, null],
+    [null, null, null, null, K, M, M, M, M, M, K, null, null, null],
     legs,
     shoes,
+    [null, null, null, null, null, null, null, null, null, null, null, null, null, null],
   ];
 }
 
 function robotDown(step: 0 | 1): PixelGrid {
-  // Facing camera: stride left vs right foot
   const legs: Pixel[] =
     step === 0
-      ? [null, null, null, K, K, null, null, null, null, K, null, null, null, null]
-      : [null, null, null, null, K, null, null, null, null, K, K, null, null, null];
+      ? [null, null, null, K, K, null, null, null, null, K, K, null, null, null]
+      : [null, null, K, K, null, null, null, null, K, K, null, null, null, null];
   const shoes: Pixel[] =
     step === 0
-      ? [null, null, null, D, D, D, null, null, null, D, D, null, null, null]
-      : [null, null, null, D, D, null, null, null, D, D, D, null, null, null];
+      ? [null, null, null, D, D, null, null, null, null, D, D, null, null, null]
+      : [null, null, D, D, null, null, null, null, D, D, null, null, null, null];
 
   return [
     [null, null, null, null, null, null, A, A, null, null, null, null, null, null],
-    [null, null, null, null, null, null, D, A, null, null, null, null, null, null],
-    [null, null, null, K, M, M, M, M, M, M, K, null, null, null],
-    [null, null, K, M, M, M, M, M, M, M, M, K, null, null],
-    [null, null, M, M, M, M, M, M, M, M, M, M, null, null],
-    [null, null, M, V, V, V, V, V, V, V, V, M, null, null],
-    [null, null, M, V, L, D, V, V, L, D, V, M, null, null],
-    [null, null, M, V, L, L, V, V, L, L, V, M, null, null],
-    [null, null, M, M, K, K, K, K, K, K, M, M, null, null],
-    [null, null, K, M, M, M, M, M, M, M, M, K, null, null],
-    [null, null, null, K, M, A, A, A, A, M, K, null, null, null],
-    [null, null, null, null, K, M, M, M, M, K, null, null, null, null],
+    [null, null, null, null, null, K, M, M, M, K, null, null, null, null],
+    [null, null, null, null, K, M, M, M, M, M, K, null, null, null],
+    [null, null, null, null, K, M, V, V, V, M, K, null, null, null],
+    [null, null, null, null, K, V, L, D, L, D, K, null, null, null],
+    [null, null, null, null, null, K, M, M, M, K, null, null, null, null],
+    [null, null, null, null, K, M, M, M, M, M, K, null, null, null],
+    [null, null, null, K, M, M, M, M, M, M, M, K, null, null],
+    [null, null, null, K, M, M, A, A, A, M, M, K, null, null],
+    [null, null, null, K, M, M, M, M, M, M, M, K, null, null],
+    [null, null, null, null, K, M, M, M, M, M, K, null, null, null],
     legs,
     shoes,
+    [null, null, null, null, null, null, null, null, null, null, null, null, null, null],
   ];
 }
 
