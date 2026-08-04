@@ -402,6 +402,7 @@ export class GameApp {
       maxH = Math.min(window.innerHeight * 0.58, 640);
     }
     this.renderer.resizeForMaze(this.session.maze, maxW, maxH);
+    this.renderer.updateCamera(this.session.player.getWorldPos(), 0, true);
   };
 
   private update = (dt: number): void => {
@@ -428,6 +429,7 @@ export class GameApp {
     this.session.update(dt, this.input.getDesiredDirection(), startRequested);
     this.syncHighScorePrompt();
     this.renderer.advanceAnim(dt);
+    this.renderer.updateCamera(this.session.player.getWorldPos(), dt);
   };
 
   private render = (): void => {

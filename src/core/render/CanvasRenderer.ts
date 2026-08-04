@@ -76,6 +76,12 @@ export interface TrapVisualState {
 
 const TILE = 16;
 const SPRITE = 14;
+/** Prefer showing about this many tiles on the shorter viewport axis. */
+const TARGET_VISIBLE_TILES = 11;
+/** Start scrolling when the focus enters this many tiles of the viewport edge. */
+const CAMERA_MARGIN_TILES = 2.5;
+/** Exponential follow rate (higher = snappier). */
+const CAMERA_LERP = 14;
 
 /**
  * Pixel-art canvas renderer. Scales the internal buffer for crisp pixels.
@@ -107,6 +113,12 @@ export class CanvasRenderer {
   private trapAnim = 0;
 
   private tileSize = TILE;
+  private mazePixelW = 0;
+  private mazePixelH = 0;
+  private viewW = 0;
+  private viewH = 0;
+  private camX = 0;
+  private camY = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -141,14 +153,87 @@ export class CanvasRenderer {
     const pixelH = maze.height * this.tileSize;
     this.buffer.width = pixelW;
     this.buffer.height = pixelH;
+    this.mazePixelW = pixelW;
+    this.mazePixelH = pixelH;
 
-    const scale = Math.max(1, Math.floor(Math.min(maxCssWidth / pixelW, maxCssHeight / pixelH)));
+    const targetVisible = Math.min(TARGET_VISIBLE_TILES, maze.width, maze.height);
+    const scale = Math.max(
+      1,
+      Math.floor(Math.min(maxCssWidth, maxCssHeight) / (targetVisible * this.tileSize)),
+    );
 
-    this.canvas.width = pixelW * scale;
-    this.canvas.height = pixelH * scale;
-    this.canvas.style.width = `${pixelW * scale}px`;
-    this.canvas.style.height = `${pixelH * scale}px`;
+    const viewW = Math.min(pixelW, Math.floor(maxCssWidth / scale));
+    const viewH = Math.min(pixelH, Math.floor(maxCssHeight / scale));
+    this.viewW = Math.max(this.tileSize, viewW);
+    this.viewH = Math.max(this.tileSize, viewH);
+
+    this.canvas.width = this.viewW * scale;
+    this.canvas.height = this.viewH * scale;
+    this.canvas.style.width = `${this.viewW * scale}px`;
+    this.canvas.style.height = `${this.viewH * scale}px`;
     this.ctx.imageSmoothingEnabled = false;
+
+    this.camX = this.clampCamX(this.camX);
+    this.camY = this.clampCamY(this.camY);
+  }
+
+  /**
+   * Keep `focus` (tile units) inset from the viewport edge; lerp unless `snap`.
+   */
+  updateCamera(focus: Vec2, dt = 0, snap = false): void {
+    const desired = this.desiredCamera(focus);
+    if (snap || dt <= 0) {
+      this.camX = desired.x;
+      this.camY = desired.y;
+      return;
+    }
+    const t = 1 - Math.exp(-CAMERA_LERP * dt);
+    this.camX += (desired.x - this.camX) * t;
+    this.camY += (desired.y - this.camY) * t;
+    this.camX = this.clampCamX(this.camX);
+    this.camY = this.clampCamY(this.camY);
+  }
+
+  private desiredCamera(focus: Vec2): Vec2 {
+    const tw = this.tileSize;
+    const fx = focus.x * tw;
+    const fy = focus.y * tw;
+    const margin = CAMERA_MARGIN_TILES * tw;
+
+    let x = this.camX;
+    let y = this.camY;
+
+    if (this.mazePixelW <= this.viewW) {
+      x = (this.mazePixelW - this.viewW) / 2;
+    } else {
+      const left = x + margin;
+      const right = x + this.viewW - margin;
+      if (fx < left) x = fx - margin;
+      else if (fx > right) x = fx - (this.viewW - margin);
+      x = this.clampCamX(x);
+    }
+
+    if (this.mazePixelH <= this.viewH) {
+      y = (this.mazePixelH - this.viewH) / 2;
+    } else {
+      const top = y + margin;
+      const bottom = y + this.viewH - margin;
+      if (fy < top) y = fy - margin;
+      else if (fy > bottom) y = fy - (this.viewH - margin);
+      y = this.clampCamY(y);
+    }
+
+    return { x, y };
+  }
+
+  private clampCamX(x: number): number {
+    if (this.mazePixelW <= this.viewW) return (this.mazePixelW - this.viewW) / 2;
+    return Math.max(0, Math.min(x, this.mazePixelW - this.viewW));
+  }
+
+  private clampCamY(y: number): number {
+    if (this.mazePixelH <= this.viewH) return (this.mazePixelH - this.viewH) / 2;
+    return Math.max(0, Math.min(y, this.mazePixelH - this.viewH));
   }
 
   advanceAnim(dt: number): void {
@@ -336,7 +421,28 @@ export class CanvasRenderer {
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.imageSmoothingEnabled = false;
-    this.ctx.drawImage(this.buffer, 0, 0, this.canvas.width, this.canvas.height);
+
+    // Integer source rect keeps nearest-neighbor scaling crisp while the camera lerps.
+    let sx = Math.round(this.camX);
+    let sy = Math.round(this.camY);
+    if (this.mazePixelW > this.viewW) {
+      sx = Math.max(0, Math.min(sx, this.mazePixelW - this.viewW));
+    }
+    if (this.mazePixelH > this.viewH) {
+      sy = Math.max(0, Math.min(sy, this.mazePixelH - this.viewH));
+    }
+
+    this.ctx.drawImage(
+      this.buffer,
+      sx,
+      sy,
+      this.viewW,
+      this.viewH,
+      0,
+      0,
+      this.canvas.width,
+      this.canvas.height,
+    );
   }
 
   /** Draw corridor-facing wall edges only — solid masses instead of a Pac-Man cell grid. */
