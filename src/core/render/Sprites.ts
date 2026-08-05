@@ -1,5 +1,5 @@
 import type { Direction } from "../types";
-import { bakeSprite, flipGridX, scaleGrid2x, type PixelGrid } from "./PixelArt";
+import { bakeSprite, createPixelCanvas, flipGridX, scaleGrid2x, type PixelGrid } from "./PixelArt";
 import {
   flipCanvasX,
   layoutFromImage,
@@ -220,7 +220,14 @@ export function playerSpriteFor(
   return frames[frameIndex % frames.length]!;
 }
 
-// --- Humans (28×28) ---
+// --- Aliens / ghosts (28×28 walk sheet, facing right) ---
+
+/** Alien walk spritesheet: 4×3 grid of side-view frames (facing right). */
+export const ALIEN_WALK_SHEET = {
+  url: "/alien-walk.png",
+  columns: 4,
+  rows: 3,
+} as const;
 
 export type GhostPalette = {
   body: string;
@@ -229,6 +236,11 @@ export type GhostPalette = {
   pupil?: string;
   hair?: string;
   skin?: string;
+};
+
+export type GhostSpriteSet = {
+  right: HTMLCanvasElement[];
+  left: HTMLCanvasElement[];
 };
 
 const SKIN = "#E8B896";
@@ -311,26 +323,113 @@ export const GHOST_PALETTES: GhostPalette[] = [
   { body: "#D45A9A", skirt: "#8A3068", hair: "#4A2038" },
 ];
 
-export function createGhostSprites(palette: GhostPalette): HTMLCanvasElement[] {
-  return [
+/** Programmatic fallback (legacy human frames) when alien sheet is missing. */
+export function createGhostSprites(palette: GhostPalette): GhostSpriteSet {
+  const center = [
     bakeSprite(humanFrame(palette, false, 0)),
     bakeSprite(humanFrame(palette, true, 0)),
-    bakeSprite(humanFrame(palette, false, -1)),
-    bakeSprite(humanFrame(palette, true, -1)),
+  ];
+  const right = [
     bakeSprite(humanFrame(palette, false, 1)),
     bakeSprite(humanFrame(palette, true, 1)),
   ];
+  const left = [
+    bakeSprite(humanFrame(palette, false, -1)),
+    bakeSprite(humanFrame(palette, true, -1)),
+  ];
+  // Prefer facing frames; fall back to center for idle-ish directions.
+  return { right: right.length ? right : center, left: left.length ? left : center };
+}
+
+function tintCanvas(
+  source: HTMLCanvasElement,
+  tint: [number, number, number],
+  amount: number,
+): HTMLCanvasElement {
+  const { canvas, ctx } = createPixelCanvas(source.width, source.height);
+  ctx.drawImage(source, 0, 0);
+  const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = image.data;
+  const [tr, tg, tb] = tint;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3]! === 0) continue;
+    data[i] = Math.round(data[i]! * (1 - amount) + tr * amount);
+    data[i + 1] = Math.round(data[i + 1]! * (1 - amount) + tg * amount);
+    data[i + 2] = Math.round(data[i + 2]! * (1 - amount) + tb * amount);
+  }
+  ctx.putImageData(image, 0, 0);
+  return canvas;
+}
+
+function createGhostSpritesFromSheet(img: CanvasImageSource, hunter = false): GhostSpriteSet {
+  const layout = layoutFromImage(img, ALIEN_WALK_SHEET.columns, ALIEN_WALK_SHEET.rows);
+  let right = sliceSpritesheet(img, layout, { chromaKey: "#FFFFFF", targetSize: 28 });
+  right = uniqueFrames(right);
+  if (hunter) {
+    right = right.map((f) => tintCanvas(f, [220, 40, 40], 0.35));
+  }
+  const left = right.map(flipCanvasX);
+  return { right, left };
+}
+
+/** Load alien walk sheet for normal + hunter ghosts; falls back to programmatic humans. */
+export async function loadGhostSprites(): Promise<{
+  ghosts: GhostSpriteSet[];
+  hunter: GhostSpriteSet;
+}> {
+  try {
+    const img = await loadImage(ALIEN_WALK_SHEET.url);
+    const base = createGhostSpritesFromSheet(img, false);
+    const hunter = createGhostSpritesFromSheet(img, true);
+    // One alien look for every ghost slot (palette variety was for humans).
+    const ghosts = GHOST_PALETTES.map(() => base);
+    return { ghosts, hunter };
+  } catch {
+    return {
+      ghosts: GHOST_PALETTES.map((p) => createGhostSprites(p)),
+      hunter: createGhostSprites(HUNTER_GHOST_PALETTE),
+    };
+  }
 }
 
 export function ghostSpriteFor(
-  frames: HTMLCanvasElement[],
+  sprites: GhostSpriteSet,
   animFrame: number,
   direction: Direction,
 ): HTMLCanvasElement {
-  const step = animFrame % 2;
-  const look = direction === "left" ? 1 : direction === "right" ? 2 : 0;
-  const base = look * 2;
-  return frames[base + step]!;
+  const frames = direction === "left" ? sprites.left : sprites.right;
+  return frames[animFrame % frames.length]!;
+}
+
+/** Preview frame for HUD/legend (programmatic alien silhouette). */
+export function createAlienPreviewSprite(): HTMLCanvasElement {
+  const G = "#5ADB6A";
+  const Gd = "#2E9A3E";
+  const P = "#3A2048";
+  const R = "#E24A4A";
+  const X = "#0A0810";
+  return bakeSprite(
+    art(
+      trim28([
+        "............GGGGGG............",
+        "...........GGGGGGGG...........",
+        "..........GGGRRGGRRGG.........",
+        "..........GGGRRGGRRGG.........",
+        "...........GGGGGGGG...........",
+        "............GGGGGG............",
+        ".............PPPP.............",
+        "..........PPPPPPPPPP..........",
+        ".........PPPPRRRRPPPP.........",
+        ".........PPPPPPPPPPPP.........",
+        "..........PPPPPPPPPP..........",
+        "...........PP....PP...........",
+        "...........GG....GG...........",
+        "...........XX....XX...........",
+        "..............................",
+      ]),
+      { G, d: Gd, P, R, X },
+    ),
+  );
 }
 
 function bake2x(grid: PixelGrid): HTMLCanvasElement {

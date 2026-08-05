@@ -72,7 +72,7 @@ export function createHud(parent: HTMLElement): HudElements {
         <span data-hud="dots" class="hud-value">0</span>
       </div>
       <div class="hud-group">
-        <span class="hud-label">Humans</span>
+        <span class="hud-label">Aliens</span>
         <span data-hud="ghosts" class="hud-value">0</span>
       </div>
       <div class="hud-group">

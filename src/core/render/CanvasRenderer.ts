@@ -22,6 +22,7 @@ import {
   createGhostSprites,
   createLiftSprite,
   createPlayerSprites,
+  loadGhostSprites,
   loadPlayerSprites,
   createRiftSprite,
   createShockSprite,
@@ -33,6 +34,7 @@ import {
   HUNTER_GHOST_PALETTE,
   playerSpriteFor,
   FLOOR_VOID,
+  type GhostSpriteSet,
   type PlayerSpriteSet,
 } from "./Sprites";
 
@@ -110,8 +112,8 @@ export class CanvasRenderer {
   private readonly bctx: CanvasRenderingContext2D;
 
   private playerSprites: PlayerSpriteSet;
-  private readonly ghostSprites: HTMLCanvasElement[][];
-  private readonly hunterGhostSprites: HTMLCanvasElement[];
+  private ghostSprites: GhostSpriteSet[];
+  private hunterGhostSprites: GhostSpriteSet;
   private readonly dotSprite: HTMLCanvasElement;
   private readonly wallSprite: HTMLCanvasElement;
   private readonly floorSprite: HTMLCanvasElement;
@@ -169,9 +171,15 @@ export class CanvasRenderer {
     this.auraSprites = [createAuraRing(0), createAuraRing(1)];
   }
 
-  /** Swap in spritesheet-based robot frames once the walk sheet has loaded. */
+  /** Swap in spritesheet-based robot + alien frames once sheets have loaded. */
   async loadPlayerSprites(): Promise<void> {
     this.playerSprites = await loadPlayerSprites();
+  }
+
+  async loadGhostSprites(): Promise<void> {
+    const loaded = await loadGhostSprites();
+    this.ghostSprites = loaded.ghosts;
+    this.hunterGhostSprites = loaded.hunter;
   }
 
   resizeForMaze(maze: Maze, maxCssWidth: number, maxCssHeight: number): void {
