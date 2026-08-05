@@ -105,7 +105,7 @@ export class Player extends MovableEntity {
     const arrived = this.update(dt, (c, r) => maze.isWalkable(this.floor, c, r));
     if (this.direction !== "none") {
       this.animTimer += dt;
-      if (this.animTimer >= 0.08) {
+      if (this.animTimer >= 0.12) {
         this.animTimer = 0;
         this.animFrame++;
       }

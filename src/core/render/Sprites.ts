@@ -1,17 +1,19 @@
 import type { Direction } from "../types";
 import { bakeSprite, flipGridX, scaleGrid2x, type PixelGrid } from "./PixelArt";
-import { flipCanvasX, loadImage, sliceSpritesheet } from "./SpriteSheet";
+import {
+  flipCanvasX,
+  layoutFromImage,
+  loadImage,
+  sliceSpritesheet,
+  uniqueFrames,
+} from "./SpriteSheet";
 
-/** Robot walk spritesheet: 4×3 grid of 28×28 side-view frames (facing right). */
+/** Robot walk spritesheet: 4×3 grid of side-view frames (facing right). */
 export const ROBOT_WALK_SHEET = {
   url: "/robot-walk.png",
-  frameWidth: 28,
-  frameHeight: 28,
   columns: 4,
   rows: 3,
 } as const;
-
-export const ROBOT_WALK_FRAME_COUNT = ROBOT_WALK_SHEET.columns * ROBOT_WALK_SHEET.rows;
 
 // Robot palette
 const K = "#6A7480";
@@ -176,7 +178,10 @@ export function createPlayerSprites(): PlayerSpriteSet {
 }
 
 function createPlayerSpritesFromSheet(img: CanvasImageSource): PlayerSpriteSet {
-  const right = sliceSpritesheet(img, ROBOT_WALK_SHEET, { chromaKey: "#FFFFFF" });
+  const layout = layoutFromImage(img, ROBOT_WALK_SHEET.columns, ROBOT_WALK_SHEET.rows);
+  const sliced = sliceSpritesheet(img, layout, { chromaKey: "#FFFFFF", targetSize: 28 });
+  // Sheet often repeats A-B across columns and duplicates rows — keep unique walk poses.
+  const right = uniqueFrames(sliced);
   const left = right.map(flipCanvasX);
   const idle = right[0] ?? bakeSprite(robotRight(0));
   const up = [idle, idle];
