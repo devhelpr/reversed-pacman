@@ -233,6 +233,23 @@ body {
   text-shadow:
     3px 3px 0 #0a0806,
     -1px 0 0 #3dffb544;
+  animation: title-glint 3.2s steps(2, end) infinite;
+}
+
+@keyframes title-glint {
+  0%,
+  80%,
+  100% {
+    text-shadow:
+      3px 3px 0 #0a0806,
+      -1px 0 0 #3dffb544;
+  }
+  40% {
+    text-shadow:
+      3px 3px 0 #0a0806,
+      -1px 0 0 #3dffb5aa,
+      0 0 0 #f0b42966;
+  }
 }
 
 .tagline {
@@ -247,7 +264,7 @@ body {
   flex-wrap: wrap;
   gap: 0.75rem 1.25rem;
   padding: 0.65rem 0.85rem;
-  background: color-mix(in srgb, var(--bg-2) 90%, black);
+  background: linear-gradient(180deg, #2e261e 0%, color-mix(in srgb, var(--bg-2) 90%, black) 100%);
   border: 3px solid var(--line);
   box-shadow: 4px 4px 0 #0a0806;
   image-rendering: pixelated;
@@ -272,6 +289,23 @@ body {
   font-family: var(--pixel);
   font-size: 0.75rem;
   color: var(--ink);
+  transition: color 0.05s steps(1);
+}
+
+.hud-value.hud-flash {
+  color: var(--accent);
+  animation: hud-tick 0.35s steps(2, end);
+}
+
+@keyframes hud-tick {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1px);
+    color: var(--accent-2);
+  }
 }
 
 .objective {
@@ -301,6 +335,19 @@ body {
   border: 2px solid var(--danger);
   box-shadow: 4px 4px 0 #0a0806;
   pointer-events: none;
+  animation: bait-pulse 0.7s steps(2, end) infinite;
+}
+
+@keyframes bait-pulse {
+  0%,
+  100% {
+    border-color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 28%, var(--bg-2));
+  }
+  50% {
+    border-color: #ff7a7a;
+    background: color-mix(in srgb, var(--danger) 40%, var(--bg-2));
+  }
 }
 
 .bait-banner.hidden {
@@ -318,22 +365,36 @@ body {
   position: relative;
   display: grid;
   place-items: center;
-  padding: 0.5rem;
+  padding: 0.65rem;
   background:
     repeating-linear-gradient(0deg, transparent, transparent 2px, #00000022 2px, #00000022 3px),
-    var(--bg-2);
+    linear-gradient(145deg, #2a241c, var(--bg-2) 40%, #181410);
   border: 4px solid var(--line);
   box-shadow:
     0 0 0 2px #0a0806,
+    inset 0 0 0 1px #f0b42922,
     6px 6px 0 #0a0806,
     0 16px 48px #00000066;
+}
+
+.canvas-wrap::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, #c4a060 0 6px, transparent 6px) 0 0 / 12px 12px no-repeat,
+    linear-gradient(90deg, #c4a060 0 6px, transparent 6px) 100% 0 / 12px 12px no-repeat,
+    linear-gradient(90deg, #c4a060 0 6px, transparent 6px) 0 100% / 12px 12px no-repeat,
+    linear-gradient(90deg, #c4a060 0 6px, transparent 6px) 100% 100% / 12px 12px no-repeat;
+  opacity: 0.85;
 }
 
 .canvas-wrap::after {
   content: "";
   pointer-events: none;
   position: absolute;
-  inset: 0.5rem;
+  inset: 0.65rem;
   background: repeating-linear-gradient(
     0deg,
     transparent,
@@ -342,6 +403,7 @@ body {
     #f4efe608 4px
   );
   mix-blend-mode: soft-light;
+  box-shadow: inset 0 0 0 2px #0a0c1244;
 }
 
 #game-canvas {
@@ -753,15 +815,33 @@ kbd {
 .overlay-card {
   width: min(420px, 100%);
   padding: 1.5rem 1.35rem;
-  background: linear-gradient(160deg, #2a241c, #1c1814);
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, #f0b42914, transparent 55%),
+    linear-gradient(160deg, #2a241c, #1c1814);
   border: 3px solid var(--accent);
   box-shadow: 6px 6px 0 #0a0806;
   text-align: center;
+  position: relative;
 }
 
 .overlay-card--start {
   border-color: var(--accent-2);
   box-shadow: 6px 6px 0 #062814;
+}
+
+.overlay-card--start::before {
+  content: "▶";
+  display: block;
+  margin: 0 auto 0.65rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  line-height: 2.5rem;
+  font-size: 1.1rem;
+  color: var(--accent-2);
+  background: #0a1210;
+  border: 2px solid var(--accent-2);
+  box-shadow: 3px 3px 0 #062814;
+  animation: cta-pulse 1.4s steps(2, end) infinite;
 }
 
 .overlay-logo {
@@ -774,6 +854,7 @@ kbd {
   text-shadow:
     3px 3px 0 #0a0806,
     -1px 0 0 #3dffb544;
+  animation: title-glint 3.2s steps(2, end) infinite;
 }
 
 .overlay-logo.hidden {

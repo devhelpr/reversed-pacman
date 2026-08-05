@@ -1,6 +1,8 @@
 import { GameLoop } from "../../core/engine/GameLoop";
 import { InputManager } from "../../core/engine/Input";
+import { Sfx } from "../../core/audio/Sfx";
 import { CanvasRenderer } from "../../core/render/CanvasRenderer";
+import type { JuiceEvent } from "../../core/render/Juice";
 import { getLastPlayerName, rankForScore, submitHighScore } from "../../core/scoring/HighScores";
 import {
   getFirstLevel,
@@ -38,6 +40,7 @@ export class GameApp {
   private readonly detachInput: () => void;
   private readonly detachTouch: () => void;
   private readonly renderer: CanvasRenderer;
+  private readonly sfx = new Sfx();
   private readonly hud: HudElements;
   private readonly loop: GameLoop;
   private readonly onOpenDesigner?: () => void;
@@ -153,6 +156,10 @@ export class GameApp {
     this.fitCanvas();
     this.loop = new GameLoop(this.update, this.render);
     window.addEventListener("resize", this.fitCanvas);
+
+    const unlockAudio = (): void => this.sfx.unlock();
+    window.addEventListener("pointerdown", unlockAudio, { once: true });
+    window.addEventListener("keydown", unlockAudio, { once: true });
   }
 
   start(): void {
@@ -177,6 +184,7 @@ export class GameApp {
     this.session = new GameSession(def);
     this.highScorePrompt = null;
     this.highScorePhaseKey = null;
+    this.renderer.resetFx();
     this.populateLevelSelect(def.id);
     this.closeInfo(false);
     this.fitCanvas();
@@ -411,6 +419,7 @@ export class GameApp {
         this.saveHighScore(true);
         this.closeInfo(false);
         this.session.restart();
+        this.renderer.resetFx();
         this.highScorePrompt = null;
         this.highScorePhaseKey = null;
         this.input.clearDirection();
@@ -422,15 +431,58 @@ export class GameApp {
         this.closeInfo(false);
       } else {
         this.session.togglePause();
+        this.sfx.play("pause");
       }
     }
 
     const startRequested = this.input.consumeStart();
     this.session.update(dt, this.input.getDesiredDirection(), startRequested);
+    const juice = this.session.consumeJuice();
+    this.renderer.applyJuice(juice);
+    this.playJuiceSfx(juice);
     this.syncHighScorePrompt();
     this.renderer.advanceAnim(dt);
     this.renderer.updateCamera(this.session.player.getWorldPos(), dt);
   };
+
+  private playJuiceSfx(events: readonly JuiceEvent[]): void {
+    for (const e of events) {
+      switch (e.type) {
+        case "start":
+          this.sfx.play("start");
+          break;
+        case "catch":
+          this.sfx.play("catch");
+          break;
+        case "bait":
+          this.sfx.play("bait");
+          break;
+        case "bonus":
+          this.sfx.play("bonus");
+          break;
+        case "lift":
+          this.sfx.play("lift");
+          break;
+        case "rift":
+          this.sfx.play("rift");
+          break;
+        case "fall":
+          this.sfx.play("fall");
+          break;
+        case "win":
+          this.sfx.play("win");
+          break;
+        case "fail":
+          if (e.reason === "shock") this.sfx.play("zap");
+          else if (e.reason === "ghost") this.sfx.play("ghost");
+          else if (e.reason === "dots") this.sfx.play("dots");
+          else this.sfx.play("fall");
+          break;
+        default:
+          break;
+      }
+    }
+  }
 
   private render = (): void => {
     this.renderer.render(

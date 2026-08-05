@@ -20,6 +20,9 @@ export class Ghost extends MovableEntity {
   animTimer = 0;
   animFrame = 0;
   mood: GhostMood = "forage";
+  /** 0..1 while dissolving after being caught. */
+  catchProgress = 0;
+  private catching = false;
   private readonly recent = new Array<number>();
   private readonly recentCap = 12;
   private idleTime = 0;
@@ -38,6 +41,14 @@ export class Ghost extends MovableEntity {
     huntTarget: (GridPos & { floor: number }) | null,
     huntSpeedMultiplier: number,
   ): void {
+    if (this.catching) {
+      this.catchProgress = Math.min(1, this.catchProgress + dt / 0.42);
+      if (this.catchProgress >= 1) {
+        this.alive = false;
+        this.catching = false;
+      }
+      return;
+    }
     if (!this.alive) return;
 
     const huntingHere = huntTarget !== null && huntTarget.floor === this.floor;
@@ -114,14 +125,21 @@ export class Ghost extends MovableEntity {
   }
 
   catch(): void {
-    this.alive = false;
+    if (this.catching || !this.alive) return;
+    this.catching = true;
+    this.catchProgress = 0;
     this.direction = "none";
+    this.nextDirection = "none";
     this.progress = 0;
     this.mood = "forage";
     this.recent.length = 0;
     this.idleTime = 0;
     this.patrolTarget = null;
     this.patrolAge = 0;
+  }
+
+  get isCatching(): boolean {
+    return this.catching;
   }
 
   private floorHasDots(maze: Maze): boolean {

@@ -217,7 +217,16 @@ export function updateHud(
   els.dots.textContent = String(snap.dotsRemaining);
   els.ghosts.textContent = String(snap.ghostsRemaining);
   els.time.textContent = formatTime(snap.elapsedSeconds);
-  els.score.textContent = String(snap.score);
+  const scoreText = String(snap.score);
+  if (els.score.textContent !== scoreText) {
+    els.score.textContent = scoreText;
+    els.score.classList.remove("hud-flash");
+    // Retrigger CSS animation
+    void els.score.offsetWidth;
+    els.score.classList.add("hud-flash");
+  } else {
+    els.score.textContent = scoreText;
+  }
 
   if (snap.baitRemaining > 0) {
     els.baitBanner.textContent = `BAIT ACTIVE — humans hunting! (${snap.baitRemaining.toFixed(1)}s)`;

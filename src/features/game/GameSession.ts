@@ -10,6 +10,7 @@ import type {
   HudSnapshot,
   TrapVisualState,
 } from "../../core/render/CanvasRenderer";
+import type { JuiceEvent } from "../../core/render/Juice";
 import { TrapSystem } from "../traps/TrapSystem";
 
 export class GameSession {
@@ -23,6 +24,7 @@ export class GameSession {
   bonusCollected = 0;
   finalScore: ScoreBreakdown | null = null;
   loseReason: LoseReason = null;
+  private juice: JuiceEvent[] = [];
 
   constructor(level: LevelDefinition) {
     this.level = level;
@@ -35,12 +37,19 @@ export class GameSession {
     );
   }
 
+  consumeJuice(): JuiceEvent[] {
+    const events = this.juice;
+    this.juice = [];
+    return events;
+  }
+
   start(): void {
     this.phase = "playing";
     this.elapsedSeconds = 0;
     this.bonusCollected = 0;
     this.finalScore = null;
     this.loseReason = null;
+    this.juice.push({ type: "start" });
   }
 
   restart(): void {
@@ -51,6 +60,7 @@ export class GameSession {
       (start, i) => new Ghost(start, this.level.ghostSpeed, i, this.level.ghostEatIntervalSeconds),
     );
     this.traps = new TrapSystem(this.level, this.maze.allTrapdoorPositions());
+    this.juice = [];
     this.start();
   }
 
@@ -82,13 +92,48 @@ export class GameSession {
     this.player.handleInput(desiredDirection);
     const arrived = this.player.tick(dt, this.maze);
 
+    const baitBefore = this.player.baitRemaining;
+    const preFloor = this.player.floor;
+    const preCol = this.player.col;
+    const preRow = this.player.row;
+
     const hazard = this.traps.resolvePlayerTile(this.player, this.maze, arrived);
+    if (this.player.baitRemaining > baitBefore) {
+      const pos = this.player.getWorldPos();
+      this.juice.push({ type: "bait", x: pos.x, y: pos.y });
+    }
+    if (
+      arrived &&
+      (this.player.floor !== preFloor || this.player.col !== preCol || this.player.row !== preRow)
+    ) {
+      const pos = this.player.getWorldPos();
+      this.juice.push({ type: "rift", x: pos.x, y: pos.y });
+    }
+
     if (this.maze.eatBonus(this.player.floor, this.player.col, this.player.row)) {
       this.bonusCollected += 1;
+      const pos = this.player.getWorldPos();
+      this.juice.push({
+        type: "bonus",
+        x: pos.x,
+        y: pos.y,
+        points: this.level.pointsPerBonus,
+      });
     }
-    this.player.tryLift(this.maze, arrived);
+
+    if (this.player.tryLift(this.maze, arrived)) {
+      const pos = this.player.getWorldPos();
+      this.juice.push({
+        type: "lift",
+        dir: this.player.liftDir ?? "up",
+        x: pos.x,
+        y: pos.y,
+      });
+    }
 
     if (hazard === "trapdoor") {
+      const pos = this.player.getWorldPos();
+      this.juice.push({ type: "fall", x: pos.x, y: pos.y });
       this.player.beginFall(this.level.trapdoorFallDurationSeconds);
       return;
     }
@@ -103,13 +148,16 @@ export class GameSession {
 
     for (const ghost of this.ghosts) {
       ghost.tick(dt, this.maze, huntTarget, this.level.huntSpeedMultiplier);
+      if (!ghost.alive || ghost.isCatching) continue;
       if (!this.player.overlaps(ghost)) continue;
 
       if (this.player.isHunted) {
         this.fail("ghost");
         return;
       }
+      const pos = ghost.getWorldPos();
       ghost.catch();
+      this.juice.push({ type: "catch", x: pos.x, y: pos.y, ghostIndex: ghost.index });
     }
 
     if (this.maze.getDotsRemaining() === 0) {
@@ -117,7 +165,7 @@ export class GameSession {
       return;
     }
 
-    const ghostsLeft = this.ghosts.filter((g) => g.alive).length;
+    const ghostsLeft = this.ghosts.filter((g) => g.alive || g.isCatching).length;
     if (ghostsLeft === 0) {
       const atExit =
         this.player.floor === this.maze.exit.floor &&
@@ -128,6 +176,8 @@ export class GameSession {
       if (atExit) {
         this.phase = "won";
         this.finalScore = this.scoreNow();
+        const pos = this.player.getWorldPos();
+        this.juice.push({ type: "win", x: pos.x, y: pos.y });
       }
     }
   }
@@ -174,14 +224,16 @@ export class GameSession {
 
     for (const ghost of this.ghosts) {
       if (ghost.floor !== viewFloor) continue;
+      if (!ghost.alive && !ghost.isCatching) continue;
       actors.push({
         kind: "ghost",
         ghostIndex: ghost.index,
         worldPos: ghost.getWorldPos(),
         direction: ghost.direction === "none" ? "left" : ghost.direction,
         animFrame: ghost.animFrame,
-        alive: ghost.alive,
+        alive: ghost.alive || ghost.isCatching,
         hunting: ghost.mood === "hunt",
+        catchProgress: ghost.isCatching ? ghost.catchProgress : undefined,
       });
     }
 
@@ -189,7 +241,7 @@ export class GameSession {
   }
 
   getHud(): HudSnapshot {
-    const ghostsRemaining = this.ghosts.filter((g) => g.alive).length;
+    const ghostsRemaining = this.ghosts.filter((g) => g.alive || g.isCatching).length;
     const score = this.finalScore ?? this.scoreNow();
 
     return {
@@ -224,6 +276,8 @@ export class GameSession {
   private fail(reason: LoseReason): void {
     this.phase = "lost";
     this.loseReason = reason;
+    const pos = this.player.getWorldPos();
+    this.juice.push({ type: "fail", reason, x: pos.x, y: pos.y });
     this.player.kill();
     this.finalScore = this.scoreNow();
   }

@@ -1,6 +1,19 @@
 import type { Maze } from "../maze/Maze";
 import type { Direction, GamePhase, LoseReason, TileKind, Vec2 } from "../types";
 import {
+  BAIT_COLORS,
+  BONUS_COLORS,
+  CATCH_COLORS,
+  FAIL_COLORS,
+  RIFT_COLORS,
+  ScreenShake,
+  WIN_COLORS,
+  ZAP_COLORS,
+  type JuiceEvent,
+} from "./Juice";
+import { ParticleSystem } from "./Particles";
+import {
+  createAuraRing,
   createBaitSprite,
   createBonusSprite,
   createDotSprite,
@@ -18,6 +31,7 @@ import {
   GHOST_PALETTES,
   HUNTER_GHOST_PALETTE,
   playerSpriteFor,
+  FLOOR_VOID,
   type PlayerSpriteSet,
 } from "./Sprites";
 
@@ -35,6 +49,8 @@ export interface RenderableActor {
   /** 0..1 while riding a floor lift. */
   liftProgress?: number;
   liftDir?: "up" | "down";
+  /** 0..1 while a caught human dissolves. */
+  catchProgress?: number;
 }
 
 export interface LiftTransition {
@@ -108,6 +124,9 @@ export class CanvasRenderer {
   private readonly riftSprites: HTMLCanvasElement[];
   private readonly liftUpSprites: HTMLCanvasElement[];
   private readonly liftDownSprites: HTMLCanvasElement[];
+  private readonly auraSprites: HTMLCanvasElement[];
+  private readonly fx = new ParticleSystem();
+  private readonly shake = new ScreenShake();
   private exitFrame = 0;
   private exitSprites: HTMLCanvasElement[];
   private trapAnim = 0;
@@ -146,6 +165,7 @@ export class CanvasRenderer {
     this.riftSprites = [createRiftSprite(0), createRiftSprite(1)];
     this.liftUpSprites = [createLiftSprite("up", 0), createLiftSprite("up", 1)];
     this.liftDownSprites = [createLiftSprite("down", 0), createLiftSprite("down", 1)];
+    this.auraSprites = [createAuraRing(0), createAuraRing(1)];
   }
 
   resizeForMaze(maze: Maze, maxCssWidth: number, maxCssHeight: number): void {
@@ -239,6 +259,86 @@ export class CanvasRenderer {
   advanceAnim(dt: number): void {
     this.exitFrame += dt * 4;
     this.trapAnim += dt * 3;
+    this.fx.update(dt);
+    this.shake.update(dt);
+  }
+
+  resetFx(): void {
+    this.fx.clear();
+    this.shake.reset();
+  }
+
+  /** Convert session juice into particles, floaters, and shake. */
+  applyJuice(events: readonly JuiceEvent[]): void {
+    const tw = this.tileSize;
+    for (const e of events) {
+      switch (e.type) {
+        case "catch": {
+          const x = e.x * tw;
+          const y = e.y * tw;
+          this.fx.burst(x, y, CATCH_COLORS, 18, { speed: 80, life: 0.5, size: 2 });
+          this.fx.ring(x, y, ["#3DFFB5", "#F0B429"], 10, 95);
+          this.fx.floater(x, y - 10, "CATCH!", "#3DFFB5");
+          this.shake.add(0.35);
+          break;
+        }
+        case "bonus": {
+          const x = e.x * tw;
+          const y = e.y * tw;
+          this.fx.burst(x, y, BONUS_COLORS, 12, { speed: 60, life: 0.4, size: 2 });
+          this.fx.floater(x, y - 8, `+${e.points}`, "#F0B429");
+          break;
+        }
+        case "bait": {
+          const x = e.x * tw;
+          const y = e.y * tw;
+          this.fx.ring(x, y, BAIT_COLORS, 14, 85);
+          this.fx.burst(x, y, BAIT_COLORS, 10, { speed: 50, gravity: 40 });
+          this.fx.floater(x, y - 8, "BAIT!", "#7AA8FF");
+          this.shake.add(0.18);
+          break;
+        }
+        case "fail": {
+          const x = e.x * tw;
+          const y = e.y * tw;
+          const colors = e.reason === "shock" ? ZAP_COLORS : FAIL_COLORS;
+          this.fx.burst(x, y, colors, 22, { speed: 90, life: 0.55, size: 3, gravity: 120 });
+          this.shake.add(0.55);
+          break;
+        }
+        case "win": {
+          const x = e.x * tw;
+          const y = e.y * tw;
+          this.fx.burst(x, y, WIN_COLORS, 36, { speed: 100, life: 0.8, size: 3, gravity: 60 });
+          this.fx.ring(x, y, WIN_COLORS, 16, 110);
+          this.fx.floater(x, y - 12, "CLEAR!", "#3DFFB5", 1.2);
+          this.shake.add(0.25);
+          break;
+        }
+        case "lift": {
+          const x = e.x * tw;
+          const y = e.y * tw;
+          const colors = e.dir === "up" ? (["#3DFFB5", "#1ECF8A"] as const) : BONUS_COLORS;
+          this.fx.burst(x, y, colors, 8, { speed: 40, life: 0.35, gravity: 30 });
+          break;
+        }
+        case "rift": {
+          const x = e.x * tw;
+          const y = e.y * tw;
+          this.fx.ring(x, y, RIFT_COLORS, 12, 70);
+          break;
+        }
+        case "fall": {
+          const x = e.x * tw;
+          const y = e.y * tw;
+          this.fx.burst(x, y, FAIL_COLORS, 10, { speed: 45, life: 0.4, gravity: 140 });
+          this.shake.add(0.3);
+          break;
+        }
+        default:
+          break;
+      }
+    }
   }
 
   render(
@@ -255,7 +355,7 @@ export class CanvasRenderer {
       traps.trapdoors.map((d) => [`${d.col},${d.row}`, d.openAmount] as const),
     );
 
-    ctx.fillStyle = "#0A0C12";
+    ctx.fillStyle = FLOOR_VOID;
     ctx.fillRect(0, 0, this.buffer.width, this.buffer.height);
 
     // Subtle floor slide while riding a lift
@@ -339,13 +439,21 @@ export class CanvasRenderer {
         continue;
       }
       if (actor.fallProgress !== undefined && actor.fallProgress >= 1) continue;
+      if (actor.catchProgress !== undefined && actor.catchProgress >= 1) continue;
 
       const fall = actor.fallProgress ?? 0;
       const lift = actor.liftProgress;
       const liftDir = actor.liftDir ?? "up";
+      const catchP = actor.catchProgress ?? 0;
       let scale = actor.kind === "player" && fall > 0 ? 1 - fall * 0.85 : 1;
       let sink = actor.kind === "player" && fall > 0 ? fall * tw * 0.7 : 0;
       let alpha = 1;
+
+      if (actor.kind === "ghost" && catchP > 0) {
+        scale = 1 + catchP * 0.35;
+        alpha = 1 - catchP;
+        sink = -catchP * tw * 0.25;
+      }
 
       if (actor.kind === "player" && lift !== undefined) {
         const half = lift < 0.5 ? lift * 2 : (lift - 0.5) * 2;
@@ -360,15 +468,16 @@ export class CanvasRenderer {
 
       if (actor.kind === "player") {
         if (actor.hunted && fall === 0 && lift === undefined) {
-          ctx.fillStyle = "#4B8CFF66";
-          ctx.beginPath();
-          ctx.arc(actor.worldPos.x * tw, actor.worldPos.y * tw, 18, 0, Math.PI * 2);
-          ctx.fill();
+          const aura = this.auraSprites[anim % this.auraSprites.length]!;
+          const ax = actor.worldPos.x * tw - aura.width / 2;
+          const ay = actor.worldPos.y * tw - aura.height / 2;
+          ctx.globalAlpha = 0.85;
+          ctx.drawImage(aura, ax, ay);
+          ctx.globalAlpha = 1;
         }
 
         const sprite = playerSpriteFor(this.playerSprites, actor.direction, actor.animFrame);
         if (fall > 0) {
-          // Clip into the pit as they sink
           ctx.save();
           const tileX = Math.floor(actor.worldPos.x) * tw;
           const tileY = Math.floor(actor.worldPos.y) * tw;
@@ -391,10 +500,18 @@ export class CanvasRenderer {
           ? this.hunterGhostSprites
           : this.ghostSprites[(actor.ghostIndex ?? 0) % this.ghostSprites.length]!;
         const sprite = ghostSpriteFor(frames, actor.animFrame, actor.direction);
-        ctx.drawImage(sprite, px, py);
+        if (catchP > 0 || alpha < 1 || scale !== 1) {
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.drawImage(sprite, px, py, SPRITE * scale, SPRITE * scale);
+          ctx.restore();
+        } else {
+          ctx.drawImage(sprite, px, py);
+        }
       }
     }
 
+    this.fx.draw(ctx);
     ctx.restore();
 
     if (liftTransition) {
@@ -404,7 +521,6 @@ export class CanvasRenderer {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.imageSmoothingEnabled = false;
 
-    // Integer source rect keeps nearest-neighbor scaling crisp while the camera lerps.
     let sx = Math.round(this.camX);
     let sy = Math.round(this.camY);
     if (this.mazePixelW > this.viewW) {
@@ -414,20 +530,39 @@ export class CanvasRenderer {
       sy = Math.max(0, Math.min(sy, this.mazePixelH - this.viewH));
     }
 
+    const shake = this.shake.offset();
+    const scaleX = this.canvas.width / this.viewW;
+    const scaleY = this.canvas.height / this.viewH;
+
     this.ctx.drawImage(
       this.buffer,
       sx,
       sy,
       this.viewW,
       this.viewH,
-      0,
-      0,
+      Math.round(shake.x * scaleX),
+      Math.round(shake.y * scaleY),
       this.canvas.width,
       this.canvas.height,
     );
+
+    this.drawVignette();
   }
 
-  /** Center a sprite inside a tile. */
+  private drawVignette(): void {
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const band = Math.max(4, Math.floor(Math.min(w, h) * 0.04));
+    this.ctx.fillStyle = "#0A0C1288";
+    this.ctx.fillRect(0, 0, w, band);
+    this.ctx.fillRect(0, h - band, w, band);
+    this.ctx.fillRect(0, 0, band, h);
+    this.ctx.fillRect(w - band, 0, band, h);
+    this.ctx.fillStyle = "#0A0C1244";
+    this.ctx.fillRect(band, band, w - band * 2, 2);
+    this.ctx.fillRect(band, h - band - 2, w - band * 2, 2);
+  }
+
   private drawCentered(
     ctx: CanvasRenderingContext2D,
     sprite: HTMLCanvasElement,
@@ -438,10 +573,6 @@ export class CanvasRenderer {
     ctx.drawImage(sprite, tileX + (tw - sprite.width) / 2, tileY + (tw - sprite.height) / 2);
   }
 
-  /**
-   * Perimeter metal pipes around wall masses.
-   * Straight runs meet rounded elbows so corners flow continuously.
-   */
   private drawWallPipes(
     ctx: CanvasRenderingContext2D,
     tiles: readonly (readonly TileKind[])[],
@@ -453,7 +584,6 @@ export class CanvasRenderer {
   ): void {
     const isWall = (c: number, r: number): boolean => {
       const t = tiles[r]?.[c];
-      // Out of bounds counts as wall so outer maze rim stays solid
       return t === undefined || t === "wall";
     };
 
@@ -466,15 +596,13 @@ export class CanvasRenderer {
     const se = isWall(col + 1, row + 1);
     const sw = isWall(col - 1, row + 1);
 
-    const P = Math.max(6, Math.floor(tw * 0.42)); // chunkier C64-style pipe
+    const P = Math.max(6, Math.floor(tw * 0.42));
 
-    // Outer corners first so straights can abut cleanly
     if (!n && !w) this.fillPipeElbow(ctx, x, y, P, "nw");
     if (!n && !e) this.fillPipeElbow(ctx, x + tw - P, y, P, "ne");
     if (!s && !w) this.fillPipeElbow(ctx, x, y + tw - P, P, "sw");
     if (!s && !e) this.fillPipeElbow(ctx, x + tw - P, y + tw - P, P, "se");
 
-    // Straight runs — inset by P on ends that have an outer elbow
     if (!n) {
       const x0 = x + (!w ? P : 0);
       const x1 = x + tw - (!e ? P : 0);
@@ -496,14 +624,12 @@ export class CanvasRenderer {
       if (y1 > y0) this.fillPipeV(ctx, x + tw - P, y0, P, y1 - y0, true);
     }
 
-    // Inner (concave) corners — pipe wraps into the notch
     if (n && w && !nw) this.fillPipeInner(ctx, x, y, P, "nw");
     if (n && e && !ne) this.fillPipeInner(ctx, x + tw - P, y, P, "ne");
     if (s && w && !sw) this.fillPipeInner(ctx, x, y + tw - P, P, "sw");
     if (s && e && !se) this.fillPipeInner(ctx, x + tw - P, y + tw - P, P, "se");
   }
 
-  /** Horizontal pipe band; `flip` = south face (corridor below). */
   private fillPipeH(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -514,14 +640,12 @@ export class CanvasRenderer {
   ): void {
     for (let i = 0; i < h; i++) {
       const t = (i + 0.5) / h;
-      // Corridor side is dark: north → top rows, south → bottom rows
       const u = flip ? t : 1 - t;
       ctx.fillStyle = this.pipeShade(u);
       ctx.fillRect(x, y + i, w, 1);
     }
   }
 
-  /** Vertical pipe band; `flip` = east face (corridor right). */
   private fillPipeV(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -538,10 +662,6 @@ export class CanvasRenderer {
     }
   }
 
-  /**
-   * Outer elbow — fuller quarter-pipe with floor punch outside the arc
-   * so corners read rounder (no square light tips).
-   */
   private fillPipeElbow(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -549,8 +669,7 @@ export class CanvasRenderer {
     p: number,
     corner: "nw" | "ne" | "sw" | "se",
   ): void {
-    const floor = "#0A0C12";
-    // Slightly generous radius keeps the bend looking round against straights
+    const floor = FLOOR_VOID;
     const rMax = p - 0.15;
     for (let py = 0; py < p; py++) {
       for (let px = 0; px < p; px++) {
@@ -562,14 +681,12 @@ export class CanvasRenderer {
           ctx.fillRect(x + px, y + py, 1, 1);
           continue;
         }
-        // Quantize along the radius for chunky concentric bands
         ctx.fillStyle = this.pipeShade(dist / rMax);
         ctx.fillRect(x + px, y + py, 1, 1);
       }
     }
   }
 
-  /** Inner elbow — concave wrap with the same banded shading. */
   private fillPipeInner(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -590,27 +707,16 @@ export class CanvasRenderer {
     }
   }
 
-  /**
-   * C64-style metal bands: dark on the corridor rim → softer steel inward.
-   * Hard steps (no soft lerp) for a rough pixel look; inner band == WALL_FILL.
-   */
   private pipeShade(u: number): string {
     const t = Math.min(1, Math.max(0, u));
-    // 4 equal bands — outer → inner
-    const bands = [
-      "#6A8AB0", // inner (== WALL_FILL, no seam jump)
-      "#4A6A90",
-      "#2E4868",
-      "#182838", // outer rim
-    ];
+    const bands = ["#6A8AB0", "#4A6A90", "#2E4868", "#182838"];
     const i = Math.min(bands.length - 1, Math.floor(t * bands.length));
     return bands[i]!;
   }
 
-  /** Horizontal shutter + flash while changing floors. */
   private drawLiftWipe(ctx: CanvasRenderingContext2D, lift: LiftTransition): void {
     const t = Math.min(1, Math.max(0, lift.progress));
-    const peak = Math.sin(t * Math.PI); // 0 → 1 → 0
+    const peak = Math.sin(t * Math.PI);
     const w = this.buffer.width;
     const h = this.buffer.height;
     const band = Math.floor(h * 0.42 * peak);
@@ -629,13 +735,11 @@ export class CanvasRenderer {
       ctx.fillRect(0, 0, w, band);
     }
 
-    // Center streak in travel direction
     ctx.globalAlpha = peak * 0.55;
     ctx.fillStyle = "#f4efe6";
     const streakY = lift.dir === "up" ? h * (1 - t) : h * t;
     ctx.fillRect(0, streakY - 1, w, 2);
 
-    // Tiny arrow cue
     ctx.globalAlpha = 0.7 + peak * 0.3;
     ctx.fillStyle = lift.dir === "up" ? "#3DFFB5" : "#F0B429";
     const cx = w / 2;
@@ -655,7 +759,6 @@ export class CanvasRenderer {
     ctx.restore();
   }
 
-  /** Draw closed hatch, open pit, or a sliding blend between them. */
   private drawTrapdoor(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -672,9 +775,7 @@ export class CanvasRenderer {
       return;
     }
 
-    // Pit underneath
     ctx.drawImage(this.trapdoorOpen, x, y, tw, tw);
-    // Hatch slides downward / shrinks as it opens
     const hatchH = Math.max(1, Math.floor(tw * (1 - openAmount)));
     ctx.drawImage(
       this.trapdoorClosed,

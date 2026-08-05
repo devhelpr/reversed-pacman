@@ -304,16 +304,48 @@ export function createDotSprite(): HTMLCanvasElement {
 
 /** Wall fill — matches mid pipe shade so tile seams vanish. */
 export const WALL_FILL = "#6A8AB0";
+export const FLOOR_VOID = "#0A0C12";
 
+/** Industrial plating: dark deck with rivets and a faint inner frame. */
 export function createFloorPattern(): HTMLCanvasElement {
-  const F = "#0A0C12";
-  const grid: PixelGrid = Array.from({ length: 32 }, () => Array.from({ length: 32 }, () => F));
+  const F = FLOOR_VOID;
+  const A = "#0E1218";
+  const B = "#12161E";
+  const R = "#1A2230";
+  const grid: PixelGrid = Array.from({ length: 32 }, (_, y) =>
+    Array.from({ length: 32 }, (_, x) => {
+      // Soft checker underlay
+      let c = (x + y) % 2 === 0 ? F : A;
+      // Inner plate frame
+      if (x === 1 || y === 1 || x === 30 || y === 30) c = B;
+      if (x === 0 || y === 0 || x === 31 || y === 31) c = F;
+      // Corner rivets
+      if (
+        (x === 3 && y === 3) ||
+        (x === 28 && y === 3) ||
+        (x === 3 && y === 28) ||
+        (x === 28 && y === 28)
+      ) {
+        c = R;
+      }
+      return c;
+    }),
+  );
   return bakeSprite(grid);
 }
 
+/** Wall mass with faint rivet texture so pipes sit on metal, not flat paint. */
 export function createWallPattern(): HTMLCanvasElement {
-  const grid: PixelGrid = Array.from({ length: 32 }, () =>
-    Array.from({ length: 32 }, () => WALL_FILL),
+  const W = WALL_FILL;
+  const D = "#5A7A9E";
+  const L = "#7A9AC0";
+  const grid: PixelGrid = Array.from({ length: 32 }, (_, y) =>
+    Array.from({ length: 32 }, (_, x) => {
+      let c = W;
+      if ((x + y * 3) % 11 === 0) c = D;
+      if (x % 8 === 4 && y % 8 === 4) c = L;
+      return c;
+    }),
   );
   return bakeSprite(grid);
 }
@@ -336,15 +368,38 @@ export function createExitSprite(frame: number): HTMLCanvasElement {
 export function createBaitSprite(frame: number): HTMLCanvasElement {
   const A = frame % 2 === 0 ? "#4B8CFF" : "#7AA8FF";
   const B = frame % 2 === 0 ? "#7AA8FF" : "#B8CCFF";
+  const C = frame % 2 === 0 ? "#B8CCFF" : "#E8F0FF";
+  const S = "#1A2848";
   return bake2x([
-    [null, null, A, A, null, null, null, null],
-    [null, A, B, B, A, null, null, null],
-    [A, B, B, B, B, A, null, null],
-    [A, B, B, B, B, A, null, null],
-    [null, A, B, B, A, null, null, null],
-    [null, null, A, A, null, null, null, null],
+    [null, null, null, A, A, null, null, null],
+    [null, null, A, B, B, A, null, null],
+    [null, A, B, C, C, B, A, null],
+    [A, B, C, C, C, C, B, A],
+    [A, B, C, C, C, C, B, A],
+    [null, A, B, C, C, B, A, null],
+    [null, null, A, B, B, A, null, null],
+    [null, null, null, A, A, null, null, null],
+    [null, null, null, S, S, null, null, null],
     [null, null, null, null, null, null, null, null],
-    [null, null, null, null, null, null, null, null],
+  ]);
+}
+
+/** Pixel ring used as the bait “hunted” aura (no soft circles). */
+export function createAuraRing(frame: number): HTMLCanvasElement {
+  const A = frame % 2 === 0 ? "#4B8CFF" : "#7AA8FF";
+  const C = frame % 2 === 0 ? "#3A6AD0" : "#5A88E0";
+  const _ = null;
+  return bake2x([
+    [_, _, _, A, A, A, A, _, _, _],
+    [_, _, A, C, C, C, C, A, _, _],
+    [_, A, C, _, _, _, _, C, A, _],
+    [A, C, _, _, _, _, _, _, C, A],
+    [A, C, _, _, _, _, _, _, C, A],
+    [A, C, _, _, _, _, _, _, C, A],
+    [A, C, _, _, _, _, _, _, C, A],
+    [_, A, C, _, _, _, _, C, A, _],
+    [_, _, A, C, C, C, C, A, _, _],
+    [_, _, _, A, A, A, A, _, _, _],
   ]);
 }
 
