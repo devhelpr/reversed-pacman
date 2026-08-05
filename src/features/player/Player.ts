@@ -107,7 +107,7 @@ export class Player extends MovableEntity {
       this.animTimer += dt;
       if (this.animTimer >= 0.12) {
         this.animTimer = 0;
-        this.animFrame = (this.animFrame + 1) % 2;
+        this.animFrame++;
       }
     } else {
       this.animTimer = 0;

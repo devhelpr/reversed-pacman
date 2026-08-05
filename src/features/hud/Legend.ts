@@ -1,6 +1,10 @@
 /** Static legend describing maze tiles and hazards. */
 
-import { createSlimeSprite } from "../../core/render/Sprites";
+import {
+  createAlienPreviewSprite,
+  createRobotPreviewSprite,
+  createSlimeSprite,
+} from "../../core/render/Sprites";
 
 export interface LegendItem {
   id: string;
@@ -12,19 +16,23 @@ export interface LegendItem {
 }
 
 const slimeSpriteUrl = createSlimeSprite(0).toDataURL();
+const robotSpriteUrl = createRobotPreviewSprite().toDataURL();
+const alienSpriteUrl = createAlienPreviewSprite().toDataURL();
 
 export const LEGEND_ITEMS: LegendItem[] = [
   {
     id: "you",
     swatchClass: "swatch-you",
     label: "Robot",
-    detail: "That's you — catch humans by touching them",
+    detail: "That's you — catch aliens by touching them",
+    spriteUrl: robotSpriteUrl,
   },
   {
     id: "ghost",
     swatchClass: "swatch-ghost",
-    label: "Human",
+    label: "Alien",
     detail: "Eats yellow dots — catch them all",
+    spriteUrl: alienSpriteUrl,
   },
   {
     id: "dot",
@@ -42,7 +50,7 @@ export const LEGEND_ITEMS: LegendItem[] = [
     id: "bait",
     swatchClass: "swatch-bait",
     label: "Blue bait",
-    detail: "You can eat it — humans hunt you briefly",
+    detail: "You can eat it — aliens hunt you briefly",
   },
   {
     id: "trapdoor",

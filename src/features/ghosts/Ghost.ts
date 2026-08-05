@@ -118,9 +118,9 @@ export class Ghost extends MovableEntity {
     }
 
     this.animTimer += dt;
-    if (this.animTimer >= 0.18) {
+    if (this.animTimer >= 0.1) {
       this.animTimer = 0;
-      this.animFrame = (this.animFrame + 1) % 2;
+      this.animFrame++;
     }
   }
 

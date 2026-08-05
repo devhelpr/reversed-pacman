@@ -61,7 +61,7 @@ export class GameApp {
         <div class="game-title-row desktop-chrome">
           <div class="game-title">
             <h1>Maze Chase</h1>
-            <p class="tagline">You are the robot. Hunt the humans before they clear the maze.</p>
+            <p class="tagline">You are the robot. Hunt the aliens before they clear the maze.</p>
           </div>
           <div class="game-title-actions">
             <label class="level-select-wrap">
@@ -166,6 +166,11 @@ export class GameApp {
     this.loop.start();
   }
 
+  /** Load async assets (robot + alien walk spritesheets) before the first frame renders. */
+  async loadAssets(): Promise<void> {
+    await Promise.all([this.renderer.loadPlayerSprites(), this.renderer.loadGhostSprites()]);
+  }
+
   destroy(): void {
     this.loop.stop();
     this.detachInput();
@@ -267,7 +272,7 @@ export class GameApp {
         <div class="hud-group"><span class="hud-label">Level</span><span class="hud-value">${escapeHtml(snap.levelName)}</span></div>
         <div class="hud-group"><span class="hud-label">Floor</span><span class="hud-value">${escapeHtml(this.hud.floor.textContent ?? "")}</span></div>
         <div class="hud-group"><span class="hud-label">Dots</span><span class="hud-value">${snap.dotsRemaining}</span></div>
-        <div class="hud-group"><span class="hud-label">Humans</span><span class="hud-value">${snap.ghostsRemaining}</span></div>
+        <div class="hud-group"><span class="hud-label">Aliens</span><span class="hud-value">${snap.ghostsRemaining}</span></div>
         <div class="hud-group"><span class="hud-label">Time</span><span class="hud-value">${escapeHtml(this.hud.time.textContent ?? "")}</span></div>
         <div class="hud-group"><span class="hud-label">Score</span><span class="hud-value">${snap.score}</span></div>
       `;

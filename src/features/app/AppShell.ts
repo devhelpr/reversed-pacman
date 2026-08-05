@@ -19,7 +19,7 @@ export class AppShell {
 
   async start(): Promise<void> {
     await this.loadCustomLevels();
-    this.showPlay(this.pendingPlayLevel ?? undefined);
+    await this.showPlay(this.pendingPlayLevel ?? undefined);
   }
 
   private async loadCustomLevels(): Promise<void> {
@@ -30,7 +30,7 @@ export class AppShell {
     }
   }
 
-  private showPlay(level?: LevelDefinition): void {
+  private async showPlay(level?: LevelDefinition): Promise<void> {
     this.teardown();
     this.game = new GameApp({
       mount: this.mount,
@@ -39,6 +39,7 @@ export class AppShell {
         void this.showDesigner();
       },
     });
+    await this.game.loadAssets();
     this.game.start();
   }
 
@@ -47,11 +48,11 @@ export class AppShell {
     this.designer = new DesignerApp({
       mount: this.mount,
       onBackToPlay: () => {
-        this.showPlay();
+        void this.showPlay();
       },
       onPlayLevel: (level) => {
         this.pendingPlayLevel = level;
-        this.showPlay(level);
+        void this.showPlay(level);
       },
     });
     await this.designer.start();
