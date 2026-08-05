@@ -15,6 +15,13 @@ const KEY_TO_DIRECTION: Record<string, Direction> = {
   D: "right",
 };
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    Boolean(target.closest("input, textarea, select, [contenteditable=true]"))
+  );
+}
+
 /**
  * Tracks keyboard + programmatic (touch) movement intent.
  */
@@ -27,6 +34,9 @@ export class InputManager {
 
   attach(target: Window = window): () => void {
     const onKeyDown = (event: KeyboardEvent) => {
+      // Let name fields / other form controls receive WASD, Enter, etc.
+      if (isEditableTarget(event.target)) return;
+
       this.pressed.add(event.key);
 
       const dir = KEY_TO_DIRECTION[event.key];
@@ -50,6 +60,7 @@ export class InputManager {
     };
 
     const onKeyUp = (event: KeyboardEvent) => {
+      if (isEditableTarget(event.target)) return;
       this.pressed.delete(event.key);
     };
 
