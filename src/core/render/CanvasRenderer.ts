@@ -466,7 +466,7 @@ export class CanvasRenderer {
     const se = isWall(col + 1, row + 1);
     const sw = isWall(col - 1, row + 1);
 
-    const P = Math.max(4, Math.floor(tw * 0.35)); // pipe thickness
+    const P = Math.max(6, Math.floor(tw * 0.42)); // chunkier C64-style pipe
 
     // Outer corners first so straights can abut cleanly
     if (!n && !w) this.fillPipeElbow(ctx, x, y, P, "nw");
@@ -538,7 +538,10 @@ export class CanvasRenderer {
     }
   }
 
-  /** Outer elbow — quarter-disk; pixels outside the arc are cleared to floor (round corner). */
+  /**
+   * Outer elbow — fuller quarter-pipe with floor punch outside the arc
+   * so corners read rounder (no square light tips).
+   */
   private fillPipeElbow(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -547,25 +550,26 @@ export class CanvasRenderer {
     corner: "nw" | "ne" | "sw" | "se",
   ): void {
     const floor = "#0A0C12";
+    // Slightly generous radius keeps the bend looking round against straights
+    const rMax = p - 0.15;
     for (let py = 0; py < p; py++) {
       for (let px = 0; px < p; px++) {
         const sx = corner === "nw" || corner === "sw" ? p - 0.5 - px : px + 0.5;
         const sy = corner === "nw" || corner === "ne" ? p - 0.5 - py : py + 0.5;
         const dist = Math.sqrt(sx * sx + sy * sy);
-        if (dist > p) {
-          // Knock out the square corner so the pipe reads as a round bend
+        if (dist > rMax) {
           ctx.fillStyle = floor;
           ctx.fillRect(x + px, y + py, 1, 1);
           continue;
         }
-        // dist 0 = wall-inner (lighter), dist p = corridor-outer (darker)
-        ctx.fillStyle = this.pipeShade(dist / p);
+        // Quantize along the radius for chunky concentric bands
+        ctx.fillStyle = this.pipeShade(dist / rMax);
         ctx.fillRect(x + px, y + py, 1, 1);
       }
     }
   }
 
-  /** Inner elbow — quarter disk; corridor sits at the notch corner. */
+  /** Inner elbow — concave wrap with the same banded shading. */
   private fillPipeInner(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -573,39 +577,34 @@ export class CanvasRenderer {
     p: number,
     corner: "nw" | "ne" | "sw" | "se",
   ): void {
+    const rMax = p - 0.15;
     for (let py = 0; py < p; py++) {
       for (let px = 0; px < p; px++) {
         const sx = corner === "nw" || corner === "sw" ? px + 0.5 : p - 0.5 - px;
         const sy = corner === "nw" || corner === "ne" ? py + 0.5 : p - 0.5 - py;
         const dist = Math.sqrt(sx * sx + sy * sy);
-        if (dist > p) continue;
-        // dist 0 = corridor (darker), dist p = into wall (lighter)
-        ctx.fillStyle = this.pipeShade(1 - dist / p);
+        if (dist > rMax) continue;
+        ctx.fillStyle = this.pipeShade(1 - dist / rMax);
         ctx.fillRect(x + px, y + py, 1, 1);
       }
     }
   }
 
-  /** Tube cross-section — 0 wall-inner (softer) → 1 corridor-outer (darker). */
+  /**
+   * C64-style metal bands: dark on the corridor rim → softer steel inward.
+   * Hard steps (no soft lerp) for a rough pixel look; inner band == WALL_FILL.
+   */
   private pipeShade(u: number): string {
     const t = Math.min(1, Math.max(0, u));
-    // Outside dark → inside moderately light (matches WALL_FILL at the inner end)
-    const stops: [number, [number, number, number]][] = [
-      [0.0, [106, 138, 176]], // #6A8AB0 = WALL_FILL
-      [0.35, [78, 108, 144]],
-      [0.65, [52, 76, 108]],
-      [1.0, [28, 42, 64]], // outer rim
+    // 4 equal bands — outer → inner
+    const bands = [
+      "#6A8AB0", // inner (== WALL_FILL, no seam jump)
+      "#4A6A90",
+      "#2E4868",
+      "#182838", // outer rim
     ];
-    let i = 0;
-    while (i < stops.length - 1 && t > stops[i + 1]![0]) i++;
-    const a = stops[i]!;
-    const b = stops[Math.min(i + 1, stops.length - 1)]!;
-    const span = b[0] - a[0] || 1;
-    const f = (t - a[0]) / span;
-    const r = Math.round(a[1][0] + (b[1][0] - a[1][0]) * f);
-    const g = Math.round(a[1][1] + (b[1][1] - a[1][1]) * f);
-    const bl = Math.round(a[1][2] + (b[1][2] - a[1][2]) * f);
-    return `rgb(${r},${g},${bl})`;
+    const i = Math.min(bands.length - 1, Math.floor(t * bands.length));
+    return bands[i]!;
   }
 
   /** Horizontal shutter + flash while changing floors. */
