@@ -514,7 +514,7 @@ export class CanvasRenderer {
   ): void {
     for (let i = 0; i < h; i++) {
       const t = (i + 0.5) / h;
-      // Corridor side is bright: north → top rows, south → bottom rows
+      // Corridor side is dark: north → top rows, south → bottom rows
       const u = flip ? t : 1 - t;
       ctx.fillStyle = this.pipeShade(u);
       ctx.fillRect(x, y + i, w, 1);
@@ -538,7 +538,7 @@ export class CanvasRenderer {
     }
   }
 
-  /** Outer elbow — quarter-disk; outer arc (corridor) matches straight highlight. */
+  /** Outer elbow — quarter-disk; pixels outside the arc are cleared to floor (round corner). */
   private fillPipeElbow(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -546,13 +546,19 @@ export class CanvasRenderer {
     p: number,
     corner: "nw" | "ne" | "sw" | "se",
   ): void {
+    const floor = "#0A0C12";
     for (let py = 0; py < p; py++) {
       for (let px = 0; px < p; px++) {
         const sx = corner === "nw" || corner === "sw" ? p - 0.5 - px : px + 0.5;
         const sy = corner === "nw" || corner === "ne" ? p - 0.5 - py : py + 0.5;
         const dist = Math.sqrt(sx * sx + sy * sy);
-        if (dist > p) continue;
-        // dist 0 = wall-inner (dark), dist p = corridor-outer (bright) — same as straights
+        if (dist > p) {
+          // Knock out the square corner so the pipe reads as a round bend
+          ctx.fillStyle = floor;
+          ctx.fillRect(x + px, y + py, 1, 1);
+          continue;
+        }
+        // dist 0 = wall-inner (lighter), dist p = corridor-outer (darker)
         ctx.fillStyle = this.pipeShade(dist / p);
         ctx.fillRect(x + px, y + py, 1, 1);
       }
@@ -573,25 +579,22 @@ export class CanvasRenderer {
         const sy = corner === "nw" || corner === "ne" ? py + 0.5 : p - 0.5 - py;
         const dist = Math.sqrt(sx * sx + sy * sy);
         if (dist > p) continue;
-        // dist 0 = corridor corner (bright), dist p = into wall (dark)
+        // dist 0 = corridor (darker), dist p = into wall (lighter)
         ctx.fillStyle = this.pipeShade(1 - dist / p);
         ctx.fillRect(x + px, y + py, 1, 1);
       }
     }
   }
 
-  /** Tube cross-section — continuous lerp, 0 wall-inner → 1 corridor-outer. */
+  /** Tube cross-section — 0 wall-inner (softer) → 1 corridor-outer (darker). */
   private pipeShade(u: number): string {
     const t = Math.min(1, Math.max(0, u));
-    // Stops match WALL_FILL mid so the core blends into the pipe
+    // Outside dark → inside moderately light (matches WALL_FILL at the inner end)
     const stops: [number, [number, number, number]][] = [
-      [0.0, [74, 110, 142]], // #4A6E8E
-      [0.2, [90, 122, 154]], // #5A7A9A
-      [0.4, [106, 138, 176]], // #6A8AB0 = WALL_FILL
-      [0.55, [138, 170, 200]],
-      [0.7, [176, 204, 224]],
-      [0.85, [216, 232, 244]],
-      [1.0, [240, 246, 252]],
+      [0.0, [106, 138, 176]], // #6A8AB0 = WALL_FILL
+      [0.35, [78, 108, 144]],
+      [0.65, [52, 76, 108]],
+      [1.0, [28, 42, 64]], // outer rim
     ];
     let i = 0;
     while (i < stops.length - 1 && t > stops[i + 1]![0]) i++;
