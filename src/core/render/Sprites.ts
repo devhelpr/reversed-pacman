@@ -8,11 +8,17 @@ import {
   uniqueFrames,
 } from "./SpriteSheet";
 
-/** Robot walk spritesheet: 4×3 grid of side-view frames (facing right). */
+/**
+ * Robot walk spritesheet: 4×3 grid of side-view frames (facing right).
+ * Sheets may be larger than the sprite cells (empty margin around the grid);
+ * slicing trims that padding before dividing into frames.
+ */
 export const ROBOT_WALK_SHEET = {
   url: "/robot-walk.png",
   columns: 4,
   rows: 3,
+  /** White matte for legacy sheets; new sheets rely on alpha transparency. */
+  chromaKey: ["#FFFFFF"] as string[],
 } as const;
 
 // Robot palette
@@ -179,8 +185,13 @@ export function createPlayerSprites(): PlayerSpriteSet {
 
 function createPlayerSpritesFromSheet(img: CanvasImageSource): PlayerSpriteSet {
   const layout = layoutFromImage(img, ROBOT_WALK_SHEET.columns, ROBOT_WALK_SHEET.rows);
-  const sliced = sliceSpritesheet(img, layout, { chromaKey: "#FFFFFF", targetSize: 28 });
-  // Sheet often repeats A-B across columns and duplicates rows — keep unique walk poses.
+  const sliced = sliceSpritesheet(img, layout, {
+    chromaKey: ROBOT_WALK_SHEET.chromaKey,
+    targetSize: 28,
+    trimSheet: true,
+    trimFrames: true,
+  });
+  // Legacy sheets repeated A-B across the grid — keep unique walk poses when present.
   const right = uniqueFrames(sliced);
   const left = right.map(flipCanvasX);
   const idle = right[0] ?? bakeSprite(robotRight(0));
@@ -220,13 +231,17 @@ export function playerSpriteFor(
   return frames[frameIndex % frames.length]!;
 }
 
-// --- Aliens / ghosts (28×28 walk sheet, facing right) ---
+// --- Aliens / ghosts (walk sheet, facing right; scaled to 28×28 in-game) ---
 
-/** Alien walk spritesheet: 4×3 grid of side-view frames (facing right). */
+/**
+ * Alien walk spritesheet: 4×3 grid of side-view frames (facing right).
+ * Same padding rules as {@link ROBOT_WALK_SHEET}.
+ */
 export const ALIEN_WALK_SHEET = {
   url: "/alien-walk.png",
   columns: 4,
   rows: 3,
+  chromaKey: ["#FFFFFF"] as string[],
 } as const;
 
 export type GhostPalette = {
@@ -363,7 +378,12 @@ function tintCanvas(
 
 function createGhostSpritesFromSheet(img: CanvasImageSource, hunter = false): GhostSpriteSet {
   const layout = layoutFromImage(img, ALIEN_WALK_SHEET.columns, ALIEN_WALK_SHEET.rows);
-  let right = sliceSpritesheet(img, layout, { chromaKey: "#FFFFFF", targetSize: 28 });
+  let right = sliceSpritesheet(img, layout, {
+    chromaKey: ALIEN_WALK_SHEET.chromaKey,
+    targetSize: 28,
+    trimSheet: true,
+    trimFrames: true,
+  });
   right = uniqueFrames(right);
   if (hunter) {
     right = right.map((f) => tintCanvas(f, [220, 40, 40], 0.35));
