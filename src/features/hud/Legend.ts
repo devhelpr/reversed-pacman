@@ -1,6 +1,6 @@
 /** Static legend describing maze tiles and hazards. */
 
-import { createSlimeSprite } from "../../core/render/Sprites";
+import { createRobotPreviewSprite, createSlimeSprite } from "../../core/render/Sprites";
 
 export interface LegendItem {
   id: string;
@@ -12,6 +12,7 @@ export interface LegendItem {
 }
 
 const slimeSpriteUrl = createSlimeSprite(0).toDataURL();
+const robotSpriteUrl = createRobotPreviewSprite().toDataURL();
 
 export const LEGEND_ITEMS: LegendItem[] = [
   {
@@ -19,6 +20,7 @@ export const LEGEND_ITEMS: LegendItem[] = [
     swatchClass: "swatch-you",
     label: "Robot",
     detail: "That's you — catch humans by touching them",
+    spriteUrl: robotSpriteUrl,
   },
   {
     id: "ghost",

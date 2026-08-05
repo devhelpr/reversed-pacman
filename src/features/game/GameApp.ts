@@ -166,6 +166,11 @@ export class GameApp {
     this.loop.start();
   }
 
+  /** Load async assets (robot walk spritesheet) before the first frame renders. */
+  async loadAssets(): Promise<void> {
+    await this.renderer.loadPlayerSprites();
+  }
+
   destroy(): void {
     this.loop.stop();
     this.detachInput();

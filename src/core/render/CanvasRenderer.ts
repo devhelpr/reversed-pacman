@@ -22,6 +22,7 @@ import {
   createGhostSprites,
   createLiftSprite,
   createPlayerSprites,
+  loadPlayerSprites,
   createRiftSprite,
   createShockSprite,
   createSlimeSprite,
@@ -108,7 +109,7 @@ export class CanvasRenderer {
   private readonly buffer: HTMLCanvasElement;
   private readonly bctx: CanvasRenderingContext2D;
 
-  private readonly playerSprites: PlayerSpriteSet;
+  private playerSprites: PlayerSpriteSet;
   private readonly ghostSprites: HTMLCanvasElement[][];
   private readonly hunterGhostSprites: HTMLCanvasElement[];
   private readonly dotSprite: HTMLCanvasElement;
@@ -166,6 +167,11 @@ export class CanvasRenderer {
     this.liftUpSprites = [createLiftSprite("up", 0), createLiftSprite("up", 1)];
     this.liftDownSprites = [createLiftSprite("down", 0), createLiftSprite("down", 1)];
     this.auraSprites = [createAuraRing(0), createAuraRing(1)];
+  }
+
+  /** Swap in spritesheet-based robot frames once the walk sheet has loaded. */
+  async loadPlayerSprites(): Promise<void> {
+    this.playerSprites = await loadPlayerSprites();
   }
 
   resizeForMaze(maze: Maze, maxCssWidth: number, maxCssHeight: number): void {

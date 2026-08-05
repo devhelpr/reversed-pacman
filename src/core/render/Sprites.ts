@@ -1,5 +1,17 @@
 import type { Direction } from "../types";
 import { bakeSprite, flipGridX, scaleGrid2x, type PixelGrid } from "./PixelArt";
+import { flipCanvasX, loadImage, sliceSpritesheet } from "./SpriteSheet";
+
+/** Robot walk spritesheet: 4×3 grid of 28×28 side-view frames (facing right). */
+export const ROBOT_WALK_SHEET = {
+  url: "/robot-walk.png",
+  frameWidth: 28,
+  frameHeight: 28,
+  columns: 4,
+  rows: 3,
+} as const;
+
+export const ROBOT_WALK_FRAME_COUNT = ROBOT_WALK_SHEET.columns * ROBOT_WALK_SHEET.rows;
 
 // Robot palette
 const K = "#6A7480";
@@ -150,12 +162,41 @@ export type PlayerSpriteSet = {
   down: HTMLCanvasElement[];
 };
 
-export function createPlayerSprites(): PlayerSpriteSet {
+function createProgrammaticPlayerSprites(): PlayerSpriteSet {
   const right = [bakeSprite(robotRight(0)), bakeSprite(robotRight(1))];
   const left = [bakeSprite(flipGridX(robotRight(0))), bakeSprite(flipGridX(robotRight(1)))];
   const up = [bakeSprite(robotUp(0)), bakeSprite(robotUp(1))];
   const down = [bakeSprite(robotDown(0)), bakeSprite(robotDown(1))];
   return { right, left, up, down };
+}
+
+/** Synchronous fallback — used until the walk spritesheet finishes loading. */
+export function createPlayerSprites(): PlayerSpriteSet {
+  return createProgrammaticPlayerSprites();
+}
+
+function createPlayerSpritesFromSheet(img: CanvasImageSource): PlayerSpriteSet {
+  const right = sliceSpritesheet(img, ROBOT_WALK_SHEET, { chromaKey: "#FFFFFF" });
+  const left = right.map(flipCanvasX);
+  const idle = right[0] ?? bakeSprite(robotRight(0));
+  const up = [idle, idle];
+  const down = [idle, idle];
+  return { right, left, up, down };
+}
+
+/** Load the robot walk spritesheet; falls back to programmatic art on failure. */
+export async function loadPlayerSprites(): Promise<PlayerSpriteSet> {
+  try {
+    const img = await loadImage(ROBOT_WALK_SHEET.url);
+    return createPlayerSpritesFromSheet(img);
+  } catch {
+    return createProgrammaticPlayerSprites();
+  }
+}
+
+/** Preview frame for HUD/legend (first walk frame or programmatic fallback). */
+export function createRobotPreviewSprite(): HTMLCanvasElement {
+  return bakeSprite(robotRight(0));
 }
 
 export function playerSpriteFor(
