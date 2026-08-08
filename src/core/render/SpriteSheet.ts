@@ -10,7 +10,7 @@ export type SpriteSheetLayout = {
 export type SliceSpritesheetOptions = {
   /** Background color(s) to punch to alpha. Defaults to white (legacy mattes). */
   chromaKey?: string | string[];
-  /** Output frame size (square). Matches TILE actor sprites. */
+  /** Output frame size (square). Matches TILE actor sprites. Ignored when nativeSize is set. */
   targetSize?: number;
   /**
    * Trim transparent/chroma padding from the whole sheet before dividing into a grid.
@@ -22,12 +22,17 @@ export type SliceSpritesheetOptions = {
    * (aspect preserved, centered). Avoids squashing tall walk sprites into the tile.
    */
   trimFrames?: boolean;
+  /**
+   * When true (implies trim), return each frame at its trimmed source resolution
+   * instead of scaling into targetSize. Useful for sprite previews / labs.
+   */
+  nativeSize?: boolean;
 };
 
 /** Legacy tight sheets used a solid white matte; new sheets use real alpha. */
 const DEFAULT_CHROMA = ["#FFFFFF"];
 /** Target in-game frame size (matches TILE actor sprites). */
-export const TARGET_FRAME = 28;
+export const TARGET_FRAME = 56;
 
 function parseHex(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
@@ -164,6 +169,24 @@ function scaleNearest(source: HTMLCanvasElement, tw: number, th: number): HTMLCa
   return canvas;
 }
 
+/** Crop empty padding; keep the content at its native pixel size. */
+export function trimToContent(
+  source: HTMLCanvasElement,
+  chromas: [number, number, number][] = resolveChromas(),
+): HTMLCanvasElement {
+  const ctx = source.getContext("2d")!;
+  const image = ctx.getImageData(0, 0, source.width, source.height);
+  applyChromaKey(image.data, chromas);
+  ctx.putImageData(image, 0, 0);
+
+  const bounds = contentBounds(image.data, source.width, source.height, chromas);
+  if (!bounds) return source;
+
+  const { canvas, ctx: octx } = createPixelCanvas(bounds.w, bounds.h);
+  octx.drawImage(source, bounds.x, bounds.y, bounds.w, bounds.h, 0, 0, bounds.w, bounds.h);
+  return canvas;
+}
+
 /**
  * Trim empty padding from a frame and fit the content inside a square target
  * (uniform scale, centered). Falls back to a stretch fill when the frame is empty.
@@ -173,26 +196,19 @@ export function trimAndFitFrame(
   targetSize: number,
   chromas: [number, number, number][] = resolveChromas(),
 ): HTMLCanvasElement {
-  const ctx = source.getContext("2d")!;
-  const image = ctx.getImageData(0, 0, source.width, source.height);
-  applyChromaKey(image.data, chromas);
-  ctx.putImageData(image, 0, 0);
+  const trimmed = trimToContent(source, chromas);
+  if (trimmed.width === targetSize && trimmed.height === targetSize) return trimmed;
 
-  const bounds = contentBounds(image.data, source.width, source.height, chromas);
-  if (!bounds) {
-    return scaleNearest(source, targetSize, targetSize);
-  }
-
-  const scale = Math.min(targetSize / bounds.w, targetSize / bounds.h);
-  const dw = Math.max(1, Math.round(bounds.w * scale));
-  const dh = Math.max(1, Math.round(bounds.h * scale));
+  const scale = Math.min(targetSize / trimmed.width, targetSize / trimmed.height);
+  const dw = Math.max(1, Math.round(trimmed.width * scale));
+  const dh = Math.max(1, Math.round(trimmed.height * scale));
   const { canvas, ctx: octx } = createPixelCanvas(targetSize, targetSize);
   octx.drawImage(
-    source,
-    bounds.x,
-    bounds.y,
-    bounds.w,
-    bounds.h,
+    trimmed,
+    0,
+    0,
+    trimmed.width,
+    trimmed.height,
     Math.floor((targetSize - dw) / 2),
     Math.floor((targetSize - dh) / 2),
     dw,
@@ -211,7 +227,8 @@ export function sliceSpritesheet(
   const chromas = resolveChromas(options?.chromaKey);
   const target = options?.targetSize ?? TARGET_FRAME;
   const trimSheet = options?.trimSheet ?? false;
-  const trimFrames = options?.trimFrames ?? false;
+  const nativeSize = options?.nativeSize ?? false;
+  const trimFrames = (options?.trimFrames ?? false) || nativeSize;
 
   const { w: srcW, h: srcH } = sourceSize(source);
   const sheet = document.createElement("canvas");
@@ -262,7 +279,9 @@ export function sliceSpritesheet(
       const { canvas, ctx } = createPixelCanvas(fw, fh);
       ctx.drawImage(sheet, x0, y0, fw, fh, 0, 0, fw, fh);
 
-      if (trimFrames) {
+      if (nativeSize) {
+        frames.push(trimToContent(canvas, chromas));
+      } else if (trimFrames) {
         frames.push(trimAndFitFrame(canvas, target, chromas));
       } else {
         frames.push(scaleNearest(canvas, target, target));

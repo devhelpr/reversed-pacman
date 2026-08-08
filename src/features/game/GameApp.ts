@@ -69,6 +69,7 @@ export class GameApp {
               <select data-el="level-select" aria-label="Select level"></select>
             </label>
             <button type="button" data-el="designer-btn" class="btn">Level Designer</button>
+            <button type="button" data-el="sprites-btn" class="btn">Sprite Lab</button>
           </div>
         </div>
         <div class="mobile-topbar" aria-label="Game status">
@@ -111,6 +112,7 @@ export class GameApp {
               <select data-el="info-level-select" aria-label="Select level"></select>
             </label>
             <button type="button" data-el="info-designer" class="btn info-designer">Level Designer</button>
+            <button type="button" data-el="info-sprites" class="btn info-designer">Sprite Lab</button>
             <aside class="legend info-legend" aria-label="Legenda">
               <h3 class="legend-title">Legenda</h3>
               <ul class="legend-list">
@@ -145,6 +147,9 @@ export class GameApp {
     });
     this.mount.querySelector("[data-el='designer-btn']")!.addEventListener("click", () => {
       this.onOpenDesigner?.();
+    });
+    this.mount.querySelector("[data-el='sprites-btn']")!.addEventListener("click", () => {
+      location.hash = "#/sprites";
     });
 
     this.wireInfoSheet();
@@ -220,6 +225,10 @@ export class GameApp {
     this.mount.querySelector("[data-el='info-designer']")!.addEventListener("click", () => {
       this.closeInfo(false);
       this.onOpenDesigner?.();
+    });
+    this.mount.querySelector("[data-el='info-sprites']")!.addEventListener("click", () => {
+      this.closeInfo(false);
+      location.hash = "#/sprites";
     });
     this.mount.querySelector("[data-el='info-level-select']")!.addEventListener("change", (e) => {
       const id = (e.target as HTMLSelectElement).value;

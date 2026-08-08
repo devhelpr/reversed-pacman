@@ -93,14 +93,22 @@ export interface TrapVisualState {
   animPhase: number;
 }
 
-const TILE = 32;
-const SPRITE = 28;
+/** Buffer pixels per maze tile (2× legacy 32 for sharper sprites). */
+const TILE = 64;
+/** Actor draw size — keeps the classic ~0.875 tile inset. */
+const SPRITE = 56;
 /** Prefer showing about this many tiles on the shorter viewport axis. */
-const TARGET_VISIBLE_TILES = 11;
+const TARGET_VISIBLE_TILES = 5.5;
 /** Start scrolling when the focus enters this many tiles of the viewport edge. */
 const CAMERA_MARGIN_TILES = 2.5;
 /** Exponential follow rate (higher = snappier). */
 const CAMERA_LERP = 14;
+/** Dot alpha while the robot covers it. */
+const DOT_OCCLUDED_ALPHA = 0.35;
+/** How quickly dots fade under / recover after the robot (higher = snappier). */
+const DOT_ALPHA_LERP = 18;
+/** Tile-space half-extent for treating a dot as under the robot. */
+const DOT_OCCLUDE_RADIUS = 0.48;
 
 /**
  * Pixel-art canvas renderer. Scales the internal buffer for crisp pixels.
@@ -133,6 +141,9 @@ export class CanvasRenderer {
   private exitFrame = 0;
   private exitSprites: HTMLCanvasElement[];
   private trapAnim = 0;
+  /** Per-dot draw alpha keyed by `floor:col,row`. */
+  private readonly dotAlpha = new Map<string, number>();
+  private lastAnimDt = 0;
 
   private tileSize = TILE;
   private mazePixelW = 0;
@@ -275,11 +286,13 @@ export class CanvasRenderer {
     this.trapAnim += dt * 3;
     this.fx.update(dt);
     this.shake.update(dt);
+    this.lastAnimDt = dt;
   }
 
   resetFx(): void {
     this.fx.clear();
     this.shake.reset();
+    this.dotAlpha.clear();
   }
 
   /** Convert session juice into particles, floaters, and shake. */
@@ -290,25 +303,25 @@ export class CanvasRenderer {
         case "catch": {
           const x = e.x * tw;
           const y = e.y * tw;
-          this.fx.burst(x, y, CATCH_COLORS, 18, { speed: 80, life: 0.5, size: 2 });
-          this.fx.ring(x, y, ["#3DFFB5", "#F0B429"], 10, 95);
-          this.fx.floater(x, y - 10, "CATCH!", "#3DFFB5");
+          this.fx.burst(x, y, CATCH_COLORS, 18, { speed: 140, life: 0.5, size: 4 });
+          this.fx.ring(x, y, ["#3DFFB5", "#F0B429"], 10, 160);
+          this.fx.floater(x, y - 20, "CATCH!", "#3DFFB5");
           this.shake.add(0.35);
           break;
         }
         case "bonus": {
           const x = e.x * tw;
           const y = e.y * tw;
-          this.fx.burst(x, y, BONUS_COLORS, 12, { speed: 60, life: 0.4, size: 2 });
-          this.fx.floater(x, y - 8, `+${e.points}`, "#F0B429");
+          this.fx.burst(x, y, BONUS_COLORS, 12, { speed: 100, life: 0.4, size: 4 });
+          this.fx.floater(x, y - 16, `+${e.points}`, "#F0B429");
           break;
         }
         case "bait": {
           const x = e.x * tw;
           const y = e.y * tw;
-          this.fx.ring(x, y, BAIT_COLORS, 14, 85);
-          this.fx.burst(x, y, BAIT_COLORS, 10, { speed: 50, gravity: 40 });
-          this.fx.floater(x, y - 8, "BAIT!", "#7AA8FF");
+          this.fx.ring(x, y, BAIT_COLORS, 14, 140);
+          this.fx.burst(x, y, BAIT_COLORS, 10, { speed: 90, gravity: 70 });
+          this.fx.floater(x, y - 16, "BAIT!", "#7AA8FF");
           this.shake.add(0.18);
           break;
         }
@@ -316,16 +329,16 @@ export class CanvasRenderer {
           const x = e.x * tw;
           const y = e.y * tw;
           const colors = e.reason === "shock" ? ZAP_COLORS : FAIL_COLORS;
-          this.fx.burst(x, y, colors, 22, { speed: 90, life: 0.55, size: 3, gravity: 120 });
+          this.fx.burst(x, y, colors, 22, { speed: 160, life: 0.55, size: 5, gravity: 200 });
           this.shake.add(0.55);
           break;
         }
         case "win": {
           const x = e.x * tw;
           const y = e.y * tw;
-          this.fx.burst(x, y, WIN_COLORS, 36, { speed: 100, life: 0.8, size: 3, gravity: 60 });
-          this.fx.ring(x, y, WIN_COLORS, 16, 110);
-          this.fx.floater(x, y - 12, "CLEAR!", "#3DFFB5", 1.2);
+          this.fx.burst(x, y, WIN_COLORS, 36, { speed: 180, life: 0.8, size: 5, gravity: 100 });
+          this.fx.ring(x, y, WIN_COLORS, 16, 180);
+          this.fx.floater(x, y - 24, "CLEAR!", "#3DFFB5", 1.2);
           this.shake.add(0.25);
           break;
         }
@@ -333,19 +346,19 @@ export class CanvasRenderer {
           const x = e.x * tw;
           const y = e.y * tw;
           const colors = e.dir === "up" ? (["#3DFFB5", "#1ECF8A"] as const) : BONUS_COLORS;
-          this.fx.burst(x, y, colors, 8, { speed: 40, life: 0.35, gravity: 30 });
+          this.fx.burst(x, y, colors, 8, { speed: 70, life: 0.35, gravity: 50 });
           break;
         }
         case "rift": {
           const x = e.x * tw;
           const y = e.y * tw;
-          this.fx.ring(x, y, RIFT_COLORS, 12, 70);
+          this.fx.ring(x, y, RIFT_COLORS, 12, 120);
           break;
         }
         case "fall": {
           const x = e.x * tw;
           const y = e.y * tw;
-          this.fx.burst(x, y, FAIL_COLORS, 10, { speed: 45, life: 0.4, gravity: 140 });
+          this.fx.burst(x, y, FAIL_COLORS, 10, { speed: 80, life: 0.4, gravity: 240 });
           this.shake.add(0.3);
           break;
         }
@@ -387,6 +400,7 @@ export class CanvasRenderer {
     }
 
     const tiles = maze.snapshotTiles(floorIndex);
+    this.updateDotAlphas(actors, floorIndex, tiles, this.lastAnimDt);
     for (let row = 0; row < maze.height; row++) {
       for (let col = 0; col < maze.width; col++) {
         const tile = tiles[row]![col]!;
@@ -402,9 +416,18 @@ export class CanvasRenderer {
         ctx.drawImage(this.floorSprite, x, y, tw, tw);
 
         switch (tile) {
-          case "dot":
-            this.drawCentered(ctx, this.dotSprite, x, y, tw);
+          case "dot": {
+            const alpha = this.dotAlpha.get(`${floorIndex}:${col},${row}`) ?? 1;
+            if (alpha < 0.999) {
+              ctx.save();
+              ctx.globalAlpha = alpha;
+              this.drawCentered(ctx, this.dotSprite, x, y, tw);
+              ctx.restore();
+            } else {
+              this.drawCentered(ctx, this.dotSprite, x, y, tw);
+            }
             break;
+          }
           case "bait":
             this.drawCentered(ctx, this.baitSprites[anim % this.baitSprites.length]!, x, y, tw);
             break;
@@ -496,7 +519,8 @@ export class CanvasRenderer {
           const tileX = Math.floor(actor.worldPos.x) * tw;
           const tileY = Math.floor(actor.worldPos.y) * tw;
           ctx.beginPath();
-          ctx.rect(tileX + 4, tileY + 4, tw - 8, tw - 8);
+          const inset = Math.max(1, Math.floor(tw / 8));
+          ctx.rect(tileX + inset, tileY + inset, tw - inset * 2, tw - inset * 2);
           ctx.clip();
           ctx.globalAlpha = 1 - fall * 0.35;
           ctx.drawImage(sprite, px, py, SPRITE * scale, SPRITE * scale);
@@ -575,6 +599,51 @@ export class CanvasRenderer {
     this.ctx.fillStyle = "#0A0C1244";
     this.ctx.fillRect(band, band, w - band * 2, 2);
     this.ctx.fillRect(band, h - band - 2, w - band * 2, 2);
+  }
+
+  private updateDotAlphas(
+    actors: RenderableActor[],
+    floorIndex: number,
+    tiles: readonly (readonly TileKind[])[],
+    dt: number,
+  ): void {
+    const occluded = new Set<string>();
+    const player = actors.find((a) => a.kind === "player" && a.alive);
+    if (player) {
+      const { x: px, y: py } = player.worldPos;
+      const r = DOT_OCCLUDE_RADIUS;
+      const height = tiles.length;
+      const width = tiles[0]?.length ?? 0;
+      if (width > 0 && height > 0) {
+        const minCol = Math.max(0, Math.floor(px - r));
+        const maxCol = Math.min(width - 1, Math.floor(px + r));
+        const minRow = Math.max(0, Math.floor(py - r));
+        const maxRow = Math.min(height - 1, Math.floor(py + r));
+        for (let row = minRow; row <= maxRow; row++) {
+          for (let col = minCol; col <= maxCol; col++) {
+            if (tiles[row]![col] !== "dot") continue;
+            const dx = px - (col + 0.5);
+            const dy = py - (row + 0.5);
+            if (dx * dx + dy * dy <= r * r) {
+              occluded.add(`${floorIndex}:${col},${row}`);
+            }
+          }
+        }
+      }
+    }
+
+    const t = dt > 0 ? 1 - Math.exp(-DOT_ALPHA_LERP * dt) : 1;
+    for (const key of occluded) {
+      const cur = this.dotAlpha.get(key) ?? 1;
+      this.dotAlpha.set(key, cur + (DOT_OCCLUDED_ALPHA - cur) * t);
+    }
+    for (const [key, cur] of this.dotAlpha) {
+      if (occluded.has(key)) continue;
+      if (!key.startsWith(`${floorIndex}:`)) continue;
+      const next = cur + (1 - cur) * t;
+      if (next >= 0.995) this.dotAlpha.delete(key);
+      else this.dotAlpha.set(key, next);
+    }
   }
 
   private drawCentered(
@@ -760,13 +829,13 @@ export class CanvasRenderer {
     const cy = h / 2;
     ctx.beginPath();
     if (lift.dir === "up") {
-      ctx.moveTo(cx, cy - 10 - peak * 6);
-      ctx.lineTo(cx + 8, cy + 4);
-      ctx.lineTo(cx - 8, cy + 4);
+      ctx.moveTo(cx, cy - 20 - peak * 12);
+      ctx.lineTo(cx + 16, cy + 8);
+      ctx.lineTo(cx - 16, cy + 8);
     } else {
-      ctx.moveTo(cx, cy + 10 + peak * 6);
-      ctx.lineTo(cx + 8, cy - 4);
-      ctx.lineTo(cx - 8, cy - 4);
+      ctx.moveTo(cx, cy + 20 + peak * 12);
+      ctx.lineTo(cx + 16, cy - 8);
+      ctx.lineTo(cx - 16, cy - 8);
     }
     ctx.closePath();
     ctx.fill();

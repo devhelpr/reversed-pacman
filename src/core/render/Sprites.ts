@@ -5,20 +5,37 @@ import {
   layoutFromImage,
   loadImage,
   sliceSpritesheet,
+  TARGET_FRAME,
   uniqueFrames,
 } from "./SpriteSheet";
 
 /**
- * Robot walk spritesheet: 4×3 grid of side-view frames (facing right).
- * Sheets may be larger than the sprite cells (empty margin around the grid);
- * slicing trims that padding before dividing into frames.
+ * Robot walk spritesheets: 4×3 grids of 96×96 frames.
+ * Tight 384×288 sheets — no outer margin; black matte punched to alpha.
  */
-export const ROBOT_WALK_SHEET = {
-  url: "/robot-walk.png",
+const ROBOT_SHEET_GRID = {
   columns: 4,
   rows: 3,
-  /** White matte for legacy sheets; new sheets rely on alpha transparency. */
-  chromaKey: ["#FFFFFF"] as string[],
+  frameSize: 96,
+  chromaKey: ["#000000"] as string[],
+} as const;
+
+/** Side-view walk (facing right); mirrored for left. */
+export const ROBOT_WALK_SHEET = {
+  url: "/robot-walk-spritesheet.png",
+  ...ROBOT_SHEET_GRID,
+} as const;
+
+/** Rear-view walk — used when moving up (away from camera). */
+export const ROBOT_WALK_REAR_SHEET = {
+  url: "/robot-walk-rear-spritesheet.png",
+  ...ROBOT_SHEET_GRID,
+} as const;
+
+/** Front-view walk — used when moving down (toward camera). */
+export const ROBOT_WALK_FRONT_SHEET = {
+  url: "/robot-walk-front-spritesheet.png",
+  ...ROBOT_SHEET_GRID,
 } as const;
 
 // Robot palette
@@ -171,10 +188,11 @@ export type PlayerSpriteSet = {
 };
 
 function createProgrammaticPlayerSprites(): PlayerSpriteSet {
-  const right = [bakeSprite(robotRight(0)), bakeSprite(robotRight(1))];
-  const left = [bakeSprite(flipGridX(robotRight(0))), bakeSprite(flipGridX(robotRight(1)))];
-  const up = [bakeSprite(robotUp(0)), bakeSprite(robotUp(1))];
-  const down = [bakeSprite(robotDown(0)), bakeSprite(robotDown(1))];
+  const bake = (grid: PixelGrid) => bakeSprite(scaleGrid2x(grid));
+  const right = [bake(robotRight(0)), bake(robotRight(1))];
+  const left = [bake(flipGridX(robotRight(0))), bake(flipGridX(robotRight(1)))];
+  const up = [bake(robotUp(0)), bake(robotUp(1))];
+  const down = [bake(robotDown(0)), bake(robotDown(1))];
   return { right, left, up, down };
 }
 
@@ -183,36 +201,104 @@ export function createPlayerSprites(): PlayerSpriteSet {
   return createProgrammaticPlayerSprites();
 }
 
-function createPlayerSpritesFromSheet(img: CanvasImageSource): PlayerSpriteSet {
-  const layout = layoutFromImage(img, ROBOT_WALK_SHEET.columns, ROBOT_WALK_SHEET.rows);
-  const sliced = sliceSpritesheet(img, layout, {
-    chromaKey: ROBOT_WALK_SHEET.chromaKey,
-    targetSize: 28,
-    trimSheet: true,
-    trimFrames: true,
-  });
-  // Legacy sheets repeated A-B across the grid — keep unique walk poses when present.
-  const right = uniqueFrames(sliced);
-  const left = right.map(flipCanvasX);
-  const idle = right[0] ?? bakeSprite(robotRight(0));
-  const up = [idle, idle];
-  const down = [idle, idle];
-  return { right, left, up, down };
+type RobotSheetMeta = {
+  url: string;
+  columns: number;
+  rows: number;
+  chromaKey: readonly string[];
+};
+
+function sliceRobotWalkSheet(img: CanvasImageSource, meta: RobotSheetMeta): HTMLCanvasElement[] {
+  const layout = layoutFromImage(img, meta.columns, meta.rows);
+  return uniqueFrames(
+    sliceSpritesheet(img, layout, {
+      chromaKey: [...meta.chromaKey],
+      targetSize: TARGET_FRAME,
+      // Tight 96×96 cells — slice on exact grid, then fit each frame into the tile.
+      trimSheet: false,
+      trimFrames: true,
+    }),
+  );
 }
 
-/** Load the robot walk spritesheet; falls back to programmatic art on failure. */
+async function loadRobotWalkFrames(meta: RobotSheetMeta): Promise<HTMLCanvasElement[]> {
+  const img = await loadImage(meta.url);
+  return sliceRobotWalkSheet(img, meta);
+}
+
+/** Load side + rear + front walk sheets; falls back to programmatic art on failure. */
 export async function loadPlayerSprites(): Promise<PlayerSpriteSet> {
   try {
-    const img = await loadImage(ROBOT_WALK_SHEET.url);
-    return createPlayerSpritesFromSheet(img);
+    const [sideResult, rearResult, frontResult] = await Promise.allSettled([
+      loadRobotWalkFrames(ROBOT_WALK_SHEET),
+      loadRobotWalkFrames(ROBOT_WALK_REAR_SHEET),
+      loadRobotWalkFrames(ROBOT_WALK_FRONT_SHEET),
+    ]);
+
+    if (sideResult.status !== "fulfilled" || sideResult.value.length === 0) {
+      return createProgrammaticPlayerSprites();
+    }
+
+    const right = sideResult.value;
+    const left = right.map(flipCanvasX);
+    const up =
+      rearResult.status === "fulfilled" && rearResult.value.length > 0
+        ? rearResult.value
+        : [right[0]!, right[0]!];
+    const down =
+      frontResult.status === "fulfilled" && frontResult.value.length > 0
+        ? frontResult.value
+        : [right[0]!, right[0]!];
+
+    return { right, left, up, down };
   } catch {
     return createProgrammaticPlayerSprites();
   }
 }
 
+export type WalkSheetId = "robot" | "alien";
+
+export type WalkLabFrames = {
+  id: WalkSheetId;
+  label: string;
+  url: string;
+  /** Trimmed frames at source resolution (no game downscale). */
+  native: HTMLCanvasElement[];
+  /** Same frames fitted to the in-game actor sprite size. */
+  game: HTMLCanvasElement[];
+};
+
+function sheetMeta(id: WalkSheetId) {
+  return id === "robot"
+    ? { ...ROBOT_WALK_SHEET, label: "Robot" }
+    : { ...ALIEN_WALK_SHEET, label: "Alien" };
+}
+
+/** Load one walk sheet as native + game-sized frame lists (for the sprite lab). */
+export async function loadWalkLabFrames(id: WalkSheetId): Promise<WalkLabFrames> {
+  const meta = sheetMeta(id);
+  const img = await loadImage(meta.url);
+  const layout = layoutFromImage(img, meta.columns, meta.rows);
+  // Robot sheet is a tight 96×96 grid; alien may still have outer margin.
+  const trimSheet = id !== "robot";
+  const shared = {
+    chromaKey: meta.chromaKey,
+    trimSheet,
+  } as const;
+  const native = uniqueFrames(sliceSpritesheet(img, layout, { ...shared, nativeSize: true }));
+  const game = uniqueFrames(
+    sliceSpritesheet(img, layout, {
+      ...shared,
+      trimFrames: true,
+      targetSize: TARGET_FRAME,
+    }),
+  );
+  return { id, label: meta.label, url: meta.url, native, game };
+}
+
 /** Preview frame for HUD/legend (first walk frame or programmatic fallback). */
 export function createRobotPreviewSprite(): HTMLCanvasElement {
-  return bakeSprite(robotRight(0));
+  return bakeSprite(scaleGrid2x(robotRight(0)));
 }
 
 export function playerSpriteFor(
@@ -231,7 +317,7 @@ export function playerSpriteFor(
   return frames[frameIndex % frames.length]!;
 }
 
-// --- Aliens / ghosts (walk sheet, facing right; scaled to 28×28 in-game) ---
+// --- Aliens / ghosts (walk sheet, facing right; scaled to TARGET_FRAME in-game) ---
 
 /**
  * Alien walk spritesheet: 4×3 grid of side-view frames (facing right).
@@ -340,18 +426,10 @@ export const GHOST_PALETTES: GhostPalette[] = [
 
 /** Programmatic fallback (legacy human frames) when alien sheet is missing. */
 export function createGhostSprites(palette: GhostPalette): GhostSpriteSet {
-  const center = [
-    bakeSprite(humanFrame(palette, false, 0)),
-    bakeSprite(humanFrame(palette, true, 0)),
-  ];
-  const right = [
-    bakeSprite(humanFrame(palette, false, 1)),
-    bakeSprite(humanFrame(palette, true, 1)),
-  ];
-  const left = [
-    bakeSprite(humanFrame(palette, false, -1)),
-    bakeSprite(humanFrame(palette, true, -1)),
-  ];
+  const bake = (grid: PixelGrid) => bakeSprite(scaleGrid2x(grid));
+  const center = [bake(humanFrame(palette, false, 0)), bake(humanFrame(palette, true, 0))];
+  const right = [bake(humanFrame(palette, false, 1)), bake(humanFrame(palette, true, 1))];
+  const left = [bake(humanFrame(palette, false, -1)), bake(humanFrame(palette, true, -1))];
   // Prefer facing frames; fall back to center for idle-ish directions.
   return { right: right.length ? right : center, left: left.length ? left : center };
 }
@@ -380,7 +458,7 @@ function createGhostSpritesFromSheet(img: CanvasImageSource, hunter = false): Gh
   const layout = layoutFromImage(img, ALIEN_WALK_SHEET.columns, ALIEN_WALK_SHEET.rows);
   let right = sliceSpritesheet(img, layout, {
     chromaKey: ALIEN_WALK_SHEET.chromaKey,
-    targetSize: 28,
+    targetSize: TARGET_FRAME,
     trimSheet: true,
     trimFrames: true,
   });
@@ -429,37 +507,40 @@ export function createAlienPreviewSprite(): HTMLCanvasElement {
   const R = "#E24A4A";
   const X = "#0A0810";
   return bakeSprite(
-    art(
-      trim28([
-        "............GGGGGG............",
-        "...........GGGGGGGG...........",
-        "..........GGGRRGGRRGG.........",
-        "..........GGGRRGGRRGG.........",
-        "...........GGGGGGGG...........",
-        "............GGGGGG............",
-        ".............PPPP.............",
-        "..........PPPPPPPPPP..........",
-        ".........PPPPRRRRPPPP.........",
-        ".........PPPPPPPPPPPP.........",
-        "..........PPPPPPPPPP..........",
-        "...........PP....PP...........",
-        "...........GG....GG...........",
-        "...........XX....XX...........",
-        "..............................",
-      ]),
-      { G, d: Gd, P, R, X },
+    scaleGrid2x(
+      art(
+        trim28([
+          "............GGGGGG............",
+          "...........GGGGGGGG...........",
+          "..........GGGRRGGRRGG.........",
+          "..........GGGRRGGRRGG.........",
+          "...........GGGGGGGG...........",
+          "............GGGGGG............",
+          ".............PPPP.............",
+          "..........PPPPPPPPPP..........",
+          ".........PPPPRRRRPPPP.........",
+          ".........PPPPPPPPPPPP.........",
+          "..........PPPPPPPPPP..........",
+          "...........PP....PP...........",
+          "...........GG....GG...........",
+          "...........XX....XX...........",
+          "..............................",
+        ]),
+        { G, d: Gd, P, R, X },
+      ),
     ),
   );
 }
 
-function bake2x(grid: PixelGrid): HTMLCanvasElement {
-  return bakeSprite(scaleGrid2x(grid));
+/** Nearest-neighbor 4× bake so tile props match the 64px buffer tiles. */
+function bakeTileArt(grid: PixelGrid): HTMLCanvasElement {
+  return bakeSprite(scaleGrid2x(scaleGrid2x(grid)));
 }
 
 export function createDotSprite(): HTMLCanvasElement {
   const A = "#F0D878";
   const B = "#FFF6C8";
-  return bake2x([
+  return bakeTileArt([
     [null, A, A, null],
     [A, B, A, A],
     [A, A, A, A],
@@ -496,7 +577,7 @@ export function createFloorPattern(): HTMLCanvasElement {
       return c;
     }),
   );
-  return bakeSprite(grid);
+  return bakeSprite(scaleGrid2x(grid));
 }
 
 /** Wall mass with faint rivet texture so pipes sit on metal, not flat paint. */
@@ -512,13 +593,13 @@ export function createWallPattern(): HTMLCanvasElement {
       return c;
     }),
   );
-  return bakeSprite(grid);
+  return bakeSprite(scaleGrid2x(grid));
 }
 
 export function createExitSprite(frame: number): HTMLCanvasElement {
   const A = frame % 2 === 0 ? "#3DFFB5" : "#1ECF8A";
   const B = frame % 2 === 0 ? "#1ECF8A" : "#3DFFB5";
-  return bake2x([
+  return bakeTileArt([
     [null, A, A, A, A, A, A, null],
     [A, B, B, B, B, B, B, A],
     [A, B, A, A, A, A, B, A],
@@ -535,7 +616,7 @@ export function createBaitSprite(frame: number): HTMLCanvasElement {
   const B = frame % 2 === 0 ? "#7AA8FF" : "#B8CCFF";
   const C = frame % 2 === 0 ? "#B8CCFF" : "#E8F0FF";
   const S = "#1A2848";
-  return bake2x([
+  return bakeTileArt([
     [null, null, null, A, A, null, null, null],
     [null, null, A, B, B, A, null, null],
     [null, A, B, C, C, B, A, null],
@@ -554,7 +635,7 @@ export function createAuraRing(frame: number): HTMLCanvasElement {
   const A = frame % 2 === 0 ? "#4B8CFF" : "#7AA8FF";
   const C = frame % 2 === 0 ? "#3A6AD0" : "#5A88E0";
   const _ = null;
-  return bake2x([
+  return bakeTileArt([
     [_, _, _, A, A, A, A, _, _, _],
     [_, _, A, C, C, C, C, A, _, _],
     [_, A, C, _, _, _, _, C, A, _],
@@ -592,7 +673,7 @@ export function createTrapdoorSprite(open: boolean): HTMLCanvasElement {
       [A, V, V, V, V, V, V, V, V, V, V, V, V, V, V, R],
       [R, A, R, A, R, A, R, A, R, A, R, A, R, A, R, A],
     ];
-    return bake2x(grid);
+    return bakeTileArt(grid);
   }
 
   const L2 = "#E0B860";
@@ -616,7 +697,7 @@ export function createTrapdoorSprite(open: boolean): HTMLCanvasElement {
     [L2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, M2, L2],
     [K2, L2, L2, L2, L2, L2, L2, L2, L2, L2, L2, L2, L2, L2, L2, K2],
   ];
-  return bake2x(grid);
+  return bakeTileArt(grid);
 }
 
 export function createSlimeSprite(frame: number): HTMLCanvasElement {
@@ -665,13 +746,13 @@ export function createSlimeSprite(frame: number): HTMLCanvasElement {
           [_, _, _, _, _, _, _, _, _, _, _, _, _, _, Dd, _],
           [_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _],
         ];
-  return bake2x(grid);
+  return bakeTileArt(grid);
 }
 
 export function createShockSprite(live: boolean): HTMLCanvasElement {
   if (!live) {
     const Gg = "#3A3A3A";
-    return bake2x([
+    return bakeTileArt([
       [Gg, null, Gg, null, Gg, null, Gg, null],
       [null, Gg, null, Gg, null, Gg, null, Gg],
       [Gg, null, Gg, null, Gg, null, Gg, null],
@@ -685,7 +766,7 @@ export function createShockSprite(live: boolean): HTMLCanvasElement {
 
   const Y = "#F0B429";
   const C = "#7AD4FF";
-  return bake2x([
+  return bakeTileArt([
     [null, Y, null, C, null, Y, null, C],
     [Y, C, Y, null, C, Y, C, null],
     [null, Y, C, Y, null, C, null, Y],
@@ -700,7 +781,7 @@ export function createShockSprite(live: boolean): HTMLCanvasElement {
 export function createRiftSprite(frame: number): HTMLCanvasElement {
   const A = frame % 2 === 0 ? "#C45AD8" : "#8A30A8";
   const B = frame % 2 === 0 ? "#E8A0F0" : "#C45AD8";
-  return bake2x([
+  return bakeTileArt([
     [null, null, A, A, A, A, null, null],
     [null, A, B, B, B, B, A, null],
     [A, B, null, B, B, null, B, A],
@@ -716,7 +797,7 @@ export function createBonusSprite(frame: number): HTMLCanvasElement {
   const A = frame % 2 === 0 ? "#F0B429" : "#FFE08A";
   const B = frame % 2 === 0 ? "#E28A1A" : "#F0B429";
   const C = "#FFF6C8";
-  return bake2x([
+  return bakeTileArt([
     [null, null, null, A, A, null, null, null],
     [null, null, A, C, C, A, null, null],
     [null, A, C, A, A, C, A, null],
@@ -754,7 +835,7 @@ export function createLiftSprite(dir: "up" | "down", frame: number): HTMLCanvasE
           [null, null, C, C, C, C, null, null],
           [null, null, null, C, C, null, null, null],
         ];
-  return bake2x(arrow as PixelGrid);
+  return bakeTileArt(arrow as PixelGrid);
 }
 
 export const HUNTER_GHOST_PALETTE: GhostPalette = {

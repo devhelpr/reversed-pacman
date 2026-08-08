@@ -1430,3 +1430,131 @@ kbd {
     min-width: 44px;
   }
 }
+
+/* —— Sprite lab —— */
+
+.sprite-lab {
+  width: min(1100px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.sprite-lab-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sprite-lab-top h1 {
+  margin: 0 0 0.35rem;
+  font-family: var(--pixel);
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+
+.sprite-lab-status,
+.sprite-lab-meta,
+.sprite-lab-frame,
+.sprite-lab-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.sprite-lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.sprite-lab-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.sprite-lab-stages {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.sprite-lab-stage {
+  margin: 0;
+  padding: 0.65rem;
+  background: color-mix(in srgb, var(--bg-2) 92%, black);
+  border: 3px solid var(--line);
+  box-shadow: 4px 4px 0 #0a0806;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.sprite-lab-stage figcaption {
+  font-family: var(--pixel);
+  font-size: 0.45rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+}
+
+.sprite-lab-canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: repeating-conic-gradient(#1a1612 0% 25%, #0e0c0a 0% 50%) 0 0 / 16px 16px;
+  border: 2px solid #6a5a48;
+  max-width: 100%;
+  height: auto;
+}
+
+.sprite-lab-canvas-game {
+  width: 168px;
+  height: 168px;
+}
+
+.sprite-lab-canvas-zoomed {
+  width: min(448px, 100%);
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.sprite-lab-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.sprite-lab-frame {
+  text-align: center;
+  color: var(--ink);
+  font-family: var(--pixel);
+  font-size: 0.55rem;
+  letter-spacing: 0.04em;
+}
+
+.sprite-lab-hint {
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 860px) {
+  .sprite-lab-stages {
+    grid-template-columns: 1fr;
+  }
+
+  .sprite-lab-canvas-native {
+    max-height: 40vh;
+    width: auto;
+  }
+}

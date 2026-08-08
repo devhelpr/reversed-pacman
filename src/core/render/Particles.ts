@@ -81,7 +81,7 @@ export class ParticleSystem {
         vy: Math.sin(angle) * mag,
         life: maxLife,
         maxLife,
-        size: 2,
+        size: 4,
         color: colors[i % colors.length]!,
         gravity: 20,
       });
@@ -113,7 +113,7 @@ export class ParticleSystem {
         this.floaters.splice(i, 1);
         continue;
       }
-      f.y -= 22 * dt;
+      f.y -= 40 * dt;
     }
   }
 
@@ -132,12 +132,12 @@ export class ParticleSystem {
       const t = f.life / f.maxLife;
       ctx.globalAlpha = Math.min(1, t * 1.6);
       ctx.fillStyle = "#0A0806";
-      ctx.font = '8px "Press Start 2P", monospace';
+      ctx.font = '16px "Press Start 2P", monospace';
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       const x = Math.round(f.x);
       const y = Math.round(f.y);
-      ctx.fillText(f.text, x + 1, y + 1);
+      ctx.fillText(f.text, x + 2, y + 2);
       ctx.fillStyle = f.color;
       ctx.fillText(f.text, x, y);
     }

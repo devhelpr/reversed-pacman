@@ -1,17 +1,30 @@
 import { GameApp } from "../game/GameApp";
 import { DesignerApp } from "../levelDesigner/DesignerApp";
+import { SpriteLabApp } from "../spriteLab/SpriteLabApp";
 import { levelStore } from "../levelDesigner/LevelStore";
 import { BUILTIN_LEVEL_IDS } from "../levelDesigner/LevelJson";
 import { isBuiltinLevel, upsertLevel, type LevelDefinition } from "../levels";
 
+type AppRoute = "play" | "designer" | "sprites";
+
+function routeFromHash(): AppRoute {
+  const raw = location.hash.replace(/^#\/?/, "").split(/[?#]/)[0] ?? "";
+  if (raw === "sprites" || raw === "sprite-lab") return "sprites";
+  if (raw === "designer") return "designer";
+  return "play";
+}
+
 /**
- * Root shell that switches between gameplay and the level designer.
+ * Root shell that switches between gameplay, level designer, and sprite lab.
  */
 export class AppShell {
   private readonly mount: HTMLElement;
   private game: GameApp | null = null;
   private designer: DesignerApp | null = null;
+  private spriteLab: SpriteLabApp | null = null;
   private pendingPlayLevel: LevelDefinition | null = null;
+  private route: AppRoute = "play";
+  private navigating = false;
 
   constructor(mount: HTMLElement) {
     this.mount = mount;
@@ -19,7 +32,10 @@ export class AppShell {
 
   async start(): Promise<void> {
     await this.loadCustomLevels();
-    await this.showPlay(this.pendingPlayLevel ?? undefined);
+    window.addEventListener("hashchange", () => {
+      void this.syncRouteFromHash();
+    });
+    await this.syncRouteFromHash();
   }
 
   private async loadCustomLevels(): Promise<void> {
@@ -30,8 +46,30 @@ export class AppShell {
     }
   }
 
+  private async syncRouteFromHash(): Promise<void> {
+    if (this.navigating) return;
+    const next = routeFromHash();
+    if (next === this.route && (this.game || this.designer || this.spriteLab)) return;
+    this.route = next;
+    if (next === "sprites") await this.showSprites();
+    else if (next === "designer") await this.showDesigner();
+    else await this.showPlay(this.pendingPlayLevel ?? undefined);
+  }
+
+  private setHash(route: AppRoute): void {
+    const target = route === "play" ? "" : `#/${route}`;
+    if (location.hash === target || (route === "play" && location.hash === "")) return;
+    this.navigating = true;
+    location.hash = target;
+    queueMicrotask(() => {
+      this.navigating = false;
+    });
+  }
+
   private async showPlay(level?: LevelDefinition): Promise<void> {
     this.teardown();
+    this.route = "play";
+    this.setHash("play");
     this.game = new GameApp({
       mount: this.mount,
       level,
@@ -45,6 +83,8 @@ export class AppShell {
 
   private async showDesigner(): Promise<void> {
     this.teardown();
+    this.route = "designer";
+    this.setHash("designer");
     this.designer = new DesignerApp({
       mount: this.mount,
       onBackToPlay: () => {
@@ -58,10 +98,25 @@ export class AppShell {
     await this.designer.start();
   }
 
+  private async showSprites(): Promise<void> {
+    this.teardown();
+    this.route = "sprites";
+    this.setHash("sprites");
+    this.spriteLab = new SpriteLabApp({
+      mount: this.mount,
+      onBack: () => {
+        void this.showPlay();
+      },
+    });
+    await this.spriteLab.start();
+  }
+
   private teardown(): void {
     this.game?.destroy();
     this.game = null;
     this.designer?.destroy();
     this.designer = null;
+    this.spriteLab?.destroy();
+    this.spriteLab = null;
   }
 }
