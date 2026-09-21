@@ -256,7 +256,7 @@ export function updateHud(
   if (snap.phase === "ready") {
     showOverlay(els, snap, {
       title: "Ready?",
-      body: "Catch the humans before they eat every dot, then reach the green exit.\nTap ⓘ for tile info.",
+      body: "The last lights of the maze are fading. Aliens have broken in and are devouring the glowing dots that power your way home. As the only robot still online, hunt them through the corridors, then reach the green exit before the maze goes dark.\nTap ⓘ for tile info.",
       cta: "Tap here · swipe · or pad to start",
       hint: "ⓘ pause & info · R restart",
       variant: "start",
