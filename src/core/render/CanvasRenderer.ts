@@ -12,6 +12,7 @@ import {
   type JuiceEvent,
 } from "./Juice";
 import { ParticleSystem } from "./Particles";
+import { drawMiniMap } from "./MiniMap";
 import {
   createAuraRing,
   createBaitSprite,
@@ -585,6 +586,12 @@ export class CanvasRenderer {
     );
 
     this.drawVignette();
+    drawMiniMap(
+      this.ctx,
+      tiles,
+      { x: sx / tw, y: sy / tw, width: this.viewW / tw, height: this.viewH / tw },
+      actors.find((actor) => actor.kind === "player" && actor.alive)?.worldPos,
+    );
   }
 
   private drawVignette(): void {
