@@ -1,4 +1,5 @@
 import type { TileKind, Vec2 } from "../types";
+import { FLOOR_VOID, WALL_FILL } from "./Sprites";
 
 /** Draw only local wall geometry and the player, using tile-space camera bounds. */
 export function drawMiniMap(
@@ -26,14 +27,14 @@ export function drawMiniMap(
   const y = ctx.canvas.height - height - 10;
 
   ctx.save();
-  ctx.fillStyle = "#0A0C12";
+  ctx.fillStyle = FLOOR_VOID;
   ctx.fillRect(x, y, width, height);
   ctx.beginPath();
   ctx.rect(x, y, width, height);
   ctx.clip();
   for (let row = Math.floor(originY); row < Math.min(rows, originY + worldH); row++) {
     for (let col = Math.floor(originX); col < Math.min(cols, originX + worldW); col++) {
-      ctx.fillStyle = tiles[row]![col] === "wall" ? "#6a5a48" : "#242c32";
+      ctx.fillStyle = tiles[row]![col] === "wall" ? WALL_FILL : FLOOR_VOID;
       const left = x + Math.round((col - originX) * scale);
       const top = y + Math.round((row - originY) * scale);
       ctx.fillRect(
@@ -56,7 +57,7 @@ export function drawMiniMap(
   }
   ctx.restore();
   ctx.save();
-  ctx.strokeStyle = "#c4a060";
+  ctx.strokeStyle = WALL_FILL;
   ctx.lineWidth = 2;
   ctx.strokeRect(x, y, width, height);
   ctx.restore();

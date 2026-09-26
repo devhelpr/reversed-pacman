@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import type { TileKind } from "../types";
 import { drawMiniMap } from "./MiniMap";
+import { FLOOR_VOID, WALL_FILL } from "./Sprites";
 
 function context(width = 640, height = 480) {
   const fills: { color: string; bounds: number[] }[] = [];
@@ -37,7 +38,7 @@ describe("drawMiniMap", () => {
       expect(w).toBeLessThanOrEqual(180);
       expect(w! / h!).toBeCloseTo(8 / 6);
       // 12 columns by 9 tile units (10 partially visible rows), not the entire 40x30 map.
-      expect(fills.filter((fill) => fill.color === "#242c32")).toHaveLength(120);
+      expect(fills.slice(1).filter((fill) => fill.color === FLOOR_VOID)).toHaveLength(120);
       expect(ctx.clip).toHaveBeenCalledOnce();
     }
   });
@@ -61,8 +62,8 @@ describe("drawMiniMap", () => {
     map[1]![0] = "wall";
     const { fills, canvasContext } = context();
     drawMiniMap(canvasContext, map, { x: 0, y: 0, width: 8, height: 6 }, undefined);
-    expect(fills.slice(1, 12).map((fill) => fill.color)).toEqual(kinds.map(() => "#242c32"));
-    expect(fills.filter((fill) => fill.color === "#6a5a48")).toHaveLength(1);
+    expect(fills.slice(1, 12).map((fill) => fill.color)).toEqual(kinds.map(() => FLOOR_VOID));
+    expect(fills.filter((fill) => fill.color === WALL_FILL)).toHaveLength(1);
   });
 
   it("follows the camera to the map edge and keeps the player marker within the crop", () => {
@@ -70,7 +71,7 @@ describe("drawMiniMap", () => {
     map[29]![39] = "wall";
     const { ctx, fills, canvasContext } = context();
     drawMiniMap(canvasContext, map, { x: 32, y: 24, width: 8, height: 6 }, { x: 39.5, y: 29.5 });
-    expect(fills.filter((fill) => fill.color === "#6a5a48")).toHaveLength(1);
+    expect(fills.filter((fill) => fill.color === WALL_FILL)).toHaveLength(1);
     const marker = fills.find((fill) => fill.color === "#3DFFB5")!;
     const [x, y, w, h] = ctx.rect.mock.calls[0] as number[];
     expect(marker.bounds[0]).toBeGreaterThan(x!);
