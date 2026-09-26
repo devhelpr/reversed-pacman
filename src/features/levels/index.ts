@@ -1,6 +1,7 @@
 /** Side-effect imports register levels into the registry. */
 import "./level1";
 import "./level2";
+import "./level3";
 
 export {
   getFirstLevel,

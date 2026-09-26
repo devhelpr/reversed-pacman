@@ -7,6 +7,7 @@ export type MazeChar =
   | " " // empty path (no dot)
   | "P" // player spawn (path)
   | "G" // ghost spawn (path)
+  | "A" // aggressive alien spawn (path)
   | "E" // exit tile
   | "o" // blue bait (player can eat → hunt mode)
   | "T" // trap door
@@ -81,6 +82,7 @@ export interface ParsedFloor {
   height: number;
   tiles: TileKind[][];
   ghostStarts: GridPos[];
+  aggressiveAlienStarts: GridPos[];
   trapdoorPositions: GridPos[];
   shockPositions: GridPos[];
   riftPositions: GridPos[];
@@ -94,6 +96,7 @@ export interface ParsedLevel {
   playerStart: FloorPos;
   exit: FloorPos;
   ghostStarts: FloorPos[];
+  aggressiveAlienStarts: FloorPos[];
   initialDotCount: number;
 }
 
@@ -144,6 +147,7 @@ export function parseFloorLayout(
 
   const tiles: TileKind[][] = [];
   const ghostStarts: GridPos[] = [];
+  const aggressiveAlienStarts: GridPos[] = [];
   const trapdoorPositions: GridPos[] = [];
   const shockPositions: GridPos[] = [];
   const riftPositions: GridPos[] = [];
@@ -173,6 +177,10 @@ export function parseFloorLayout(
         case "G":
           tiles[row]![col] = "path";
           ghostStarts.push({ col, row });
+          break;
+        case "A":
+          tiles[row]![col] = "path";
+          aggressiveAlienStarts.push({ col, row });
           break;
         case "E":
           tiles[row]![col] = "exit";
@@ -225,6 +233,7 @@ export function parseFloorLayout(
     height,
     tiles,
     ghostStarts,
+    aggressiveAlienStarts,
     trapdoorPositions,
     shockPositions,
     riftPositions,
@@ -250,6 +259,7 @@ export function parseLevel(level: LevelDefinition): ParsedLevel {
   let playerStart: FloorPos | null = null;
   let exit: FloorPos | null = null;
   const ghostStarts: FloorPos[] = [];
+  const aggressiveAlienStarts: FloorPos[] = [];
   let initialDotCount = 0;
 
   for (let floorIndex = 0; floorIndex < floorDefs.length; floorIndex++) {
@@ -259,6 +269,9 @@ export function parseLevel(level: LevelDefinition): ParsedLevel {
 
     for (const g of parsed.ghostStarts) {
       ghostStarts.push({ floor: floorIndex, col: g.col, row: g.row });
+    }
+    for (const alien of parsed.aggressiveAlienStarts) {
+      aggressiveAlienStarts.push({ floor: floorIndex, col: alien.col, row: alien.row });
     }
 
     for (let row = 0; row < height; row++) {
@@ -304,9 +317,11 @@ export function parseLevel(level: LevelDefinition): ParsedLevel {
 
   if (!playerStart) throw new Error("Maze needs a player start (P)");
   if (!exit) throw new Error("Maze needs an exit (E)");
-  if (ghostStarts.length === 0) throw new Error("Maze needs at least one human (G)");
+  if (ghostStarts.length + aggressiveAlienStarts.length === 0) {
+    throw new Error("Maze needs at least one human (G) or aggressive alien (A)");
+  }
 
-  return { floors, playerStart, exit, ghostStarts, initialDotCount };
+  return { floors, playerStart, exit, ghostStarts, aggressiveAlienStarts, initialDotCount };
 }
 
 function isLiftLanding(floor: ParsedFloor, col: number, row: number): boolean {
