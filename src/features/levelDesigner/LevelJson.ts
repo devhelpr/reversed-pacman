@@ -5,7 +5,7 @@ export const LEVEL_JSON_FORMAT = "reversed-pacman-level";
 export const LEVELS_JSON_FORMAT = "reversed-pacman-levels";
 export const LEVEL_JSON_VERSION = 1;
 
-export const BUILTIN_LEVEL_IDS = new Set(["level-1", "level-2"]);
+export const BUILTIN_LEVEL_IDS = new Set(["level-1", "level-2", "level-3"]);
 
 /** Default gameplay knobs for newly created custom levels. */
 export function defaultLevelParams(): Omit<LevelDefinition, "id" | "name" | "layout" | "floors"> {

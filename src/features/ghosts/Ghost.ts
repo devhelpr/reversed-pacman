@@ -17,6 +17,7 @@ const PATROL_RETARGET_SECONDS = 6;
 export class Ghost extends MovableEntity {
   readonly index: number;
   readonly baseSpeed: number;
+  readonly aggressive: boolean;
   animTimer = 0;
   animFrame = 0;
   mood: GhostMood = "forage";
@@ -29,10 +30,18 @@ export class Ghost extends MovableEntity {
   private patrolTarget: GridPos | null = null;
   private patrolAge = 0;
 
-  constructor(start: FloorPos, speed: number, index: number, _eatIntervalSeconds: number) {
+  constructor(
+    start: FloorPos,
+    speed: number,
+    index: number,
+    _eatIntervalSeconds: number,
+    aggressive = false,
+  ) {
     super(start, speed);
     this.index = index;
     this.baseSpeed = speed;
+    this.aggressive = aggressive;
+    if (aggressive) this.mood = "hunt";
   }
 
   tick(
@@ -51,7 +60,7 @@ export class Ghost extends MovableEntity {
     }
     if (!this.alive) return;
 
-    const huntingHere = huntTarget !== null && huntTarget.floor === this.floor;
+    const huntingHere = this.aggressive || (huntTarget !== null && huntTarget.floor === this.floor);
     const floorHasDots = this.floorHasDots(maze);
 
     if (huntingHere) {

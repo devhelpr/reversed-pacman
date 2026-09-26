@@ -13,6 +13,7 @@ export const PALETTE: PaletteBrush[] = [
   { char: " ", label: "Empty", color: "#1A1512", hint: "Path, no dot" },
   { char: "P", label: "Robot", color: "#C8D0D8", hint: "One spawn" },
   { char: "G", label: "Human", color: "#E24A4A", hint: "Human spawn" },
+  { char: "A", label: "Aggressive alien", color: "#B83232", hint: "Always hunts the robot" },
   { char: "E", label: "Exit", color: "#3DFFB5", hint: "One exit" },
   { char: "o", label: "Bait", color: "#4B8CFF", hint: "Blue bait" },
   { char: "*", label: "Bonus", color: "#F0B429", hint: "Score gem" },

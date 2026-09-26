@@ -32,9 +32,7 @@ export class GameSession {
     this.maze = new Maze(parsed);
     this.traps = new TrapSystem(level, this.maze.allTrapdoorPositions());
     this.player = new Player(parsed.playerStart, level.playerSpeed);
-    this.ghosts = parsed.ghostStarts.map(
-      (start, i) => new Ghost(start, level.ghostSpeed, i, level.ghostEatIntervalSeconds),
-    );
+    this.ghosts = this.createGhosts(parsed);
   }
 
   consumeJuice(): JuiceEvent[] {
@@ -56,9 +54,7 @@ export class GameSession {
     const parsed = parseLevel(this.level);
     this.maze = new Maze(parsed);
     this.player = new Player(parsed.playerStart, this.level.playerSpeed);
-    this.ghosts = parsed.ghostStarts.map(
-      (start, i) => new Ghost(start, this.level.ghostSpeed, i, this.level.ghostEatIntervalSeconds),
-    );
+    this.ghosts = this.createGhosts(parsed);
     this.traps = new TrapSystem(this.level, this.maze.allTrapdoorPositions());
     this.juice = [];
     this.start();
@@ -142,16 +138,15 @@ export class GameSession {
       return;
     }
 
-    const huntTarget = this.player.isHunted
-      ? { floor: this.player.floor, col: this.player.col, row: this.player.row }
-      : null;
+    const playerTarget = { floor: this.player.floor, col: this.player.col, row: this.player.row };
 
     for (const ghost of this.ghosts) {
+      const huntTarget = this.player.isHunted || ghost.aggressive ? playerTarget : null;
       ghost.tick(dt, this.maze, huntTarget, this.level.huntSpeedMultiplier);
       if (!ghost.alive || ghost.isCatching) continue;
       if (!this.player.overlaps(ghost)) continue;
 
-      if (this.player.isHunted) {
+      if (this.player.isHunted || ghost.aggressive) {
         this.fail("ghost");
         return;
       }
@@ -189,6 +184,16 @@ export class GameSession {
 
   getTrapVisuals(): TrapVisualState {
     return this.traps.getVisualState(this.getViewFloor());
+  }
+
+  private createGhosts(parsed: ReturnType<typeof parseLevel>): Ghost[] {
+    return [
+      ...parsed.ghostStarts.map((start) => ({ start, aggressive: false })),
+      ...parsed.aggressiveAlienStarts.map((start) => ({ start, aggressive: true })),
+    ].map(
+      ({ start, aggressive }, i) =>
+        new Ghost(start, this.level.ghostSpeed, i, this.level.ghostEatIntervalSeconds, aggressive),
+    );
   }
 
   getViewFloor(): number {
