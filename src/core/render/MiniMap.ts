@@ -57,7 +57,7 @@ export function drawMiniMap(
   }
   ctx.restore();
   ctx.save();
-  ctx.strokeStyle = WALL_FILL;
+  ctx.strokeStyle = "#D0D6DC";
   ctx.lineWidth = 2;
   ctx.strokeRect(x, y, width, height);
   ctx.restore();
